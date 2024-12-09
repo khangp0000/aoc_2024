@@ -1,5 +1,5 @@
 [package]
-name = "khangp0000_aoc_2024"
+name = "reptile_aoc_2024"
 version = "0.1.0"
 edition = "2021"
 
@@ -20,3 +20,6 @@ chrono-tz = "0.10.0"
 [profile.release-lto]
 inherits = "release"
 lto = true
+
+[profile.release]
+debug = true

@@ -4,6 +4,8 @@ pub trait Space<T, C, const N: usize> {
     fn iter(&self) -> impl Iterator<Item = ([usize; 2], &T)>
     where
         T: 'static;
+
+    #[allow(dead_code)]
     fn iter_mut(&mut self) -> impl Iterator<Item = ([usize; 2], &mut T)>
     where
         T: 'static;
@@ -32,7 +34,6 @@ impl<T> Space<T, usize, 2> for Board2d<T> {
             .flat_map(move |(y, v)| v.iter().enumerate().map(move |(x, val)| ([x, y], val)))
     }
 
-    #[allow(dead_code)]
     fn iter_mut(&mut self) -> impl Iterator<Item = ([usize; 2], &mut T)> {
         self.inner
             .iter_mut()
