@@ -1,6 +1,5 @@
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
-use std::ops::Deref;
+use std::collections::BinaryHeap;
 use crate::error::Error;
 use crate::part_solver;
 use crate::utils::ures;
@@ -47,62 +46,8 @@ fn parse_input(input: &str) -> Result<Vec<u8>, Error> {
            })
         })
 }
+
 fn process_disk_part_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize, u8)> {
-    let (_, mut loc_map, mut free_space_size_map) = disk.enumerate()
-        .fold((0, Vec::new(), BTreeMap::new()), |(mut pos,mut loc_map, mut free_space_size_map), (idx, size)| {
-            if (idx % 2) == 0 {
-                loc_map.push((pos, size));
-            } else {
-                free_space_size_map.entry(size)
-                    .or_insert(BTreeSet::new())
-                    .insert(pos);
-            };
-            pos += size as usize;
-            (pos, loc_map, free_space_size_map)
-    });
-
-    loc_map.iter_mut()
-        .rev()
-        .for_each(|(pos, size)| {
-            if let Some(new_pos) = disk_realloc(*pos, *size, &mut free_space_size_map) {
-                *pos = new_pos
-            }
-        });
-
-    loc_map
-}
-
-fn disk_realloc(pos: usize, size: u8, free_space_size_map: &mut BTreeMap<u8, BTreeSet<usize>>) -> Option<usize> {
-    let new_pos = free_space_size_map.range_mut(size..)
-        .filter_map(|(free_size, tree)|
-            tree.first().cloned().filter(|loc| *loc < pos).map(|loc| (*free_size, tree, loc))
-        ).fold(None, |min_loc_tree, (free_size, tree, loc)| {
-        match min_loc_tree {
-            None => {Some((free_size, tree, loc))}
-            Some((current_min_free_size, current_min_tree, current_min_loc)) => {
-                if loc < current_min_loc {
-                    Some((free_size, tree, loc))
-                } else {
-                    Some((current_min_free_size, current_min_tree, current_min_loc))
-                }
-            }
-        }
-    });
-
-    if let Some((free_size, tree, new_pos)) = new_pos {
-        let _ = tree.pop_first();
-        let new_size = free_size - size;
-        if new_size > 0 {
-            let new_free_pos = new_pos + size as usize;
-            free_space_size_map.entry(new_size).or_default().insert(new_free_pos);
-        }
-        Some(new_pos)
-    } else {
-        None
-    }
-}
-
-fn process_disk_part_2_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize, u8)> {
     let len = disk.len();
     let (_, mut loc_map, mut free_space_size_map) = disk.enumerate()
         .fold((0, Vec::with_capacity(len), vec![None; 9]), |(mut pos,mut loc_map, mut free_space_size_map), (idx, size)| {
@@ -114,9 +59,6 @@ fn process_disk_part_2_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize
                     free_space_size_map[free_space_size_idx].get_or_insert_with(BinaryHeap::new)
                         .push(Reverse(pos));
                 }
-                // free_space_size_map.entry(size)
-                //     .or_insert(BTreeSet::new())
-                //     .insert(pos);
             };
             pos += size as usize;
             (pos, loc_map, free_space_size_map)
@@ -125,7 +67,7 @@ fn process_disk_part_2_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize
     loc_map.iter_mut()
         .rev()
         .for_each(|(pos, size)| {
-            if let Some(new_pos) = disk_realloc_2(*pos, *size, &mut free_space_size_map) {
+            if let Some(new_pos) = disk_realloc_part_2(*pos, *size, &mut free_space_size_map) {
                 *pos = new_pos
             }
         });
@@ -133,7 +75,7 @@ fn process_disk_part_2_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize
     loc_map
 }
 
-fn disk_realloc_2(pos: usize, size: u8, free_space_size_map: &mut Vec<Option<BinaryHeap<Reverse<usize>>>>) -> Option<usize> {
+fn disk_realloc_part_2(pos: usize, size: u8, free_space_size_map: &mut Vec<Option<BinaryHeap<Reverse<usize>>>>) -> Option<usize> {
     if size == 0 {
         None
     } else {
