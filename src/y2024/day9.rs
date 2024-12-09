@@ -86,8 +86,8 @@ fn disk_realloc_part_2(pos: usize, size: u8, free_space_size_map: &mut Vec<Optio
                 heap.as_ref().and_then(|heap| heap.peek())
                     .map(|&Reverse(new_pos)| (new_pos, new_free_size))
             })
-            .filter(|(new_pos, _)| *new_pos < pos)
-            .min();
+            .min()
+            .filter(|(new_pos, _)| *new_pos < pos);
 
         if let Some((new_pos, new_free_size)) = min_free_pos_and_idx {
             free_space_size_map[size as usize + new_free_size - 1].as_mut().unwrap().pop().unwrap();
