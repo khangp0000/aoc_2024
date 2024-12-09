@@ -1,0 +1,22 @@
+[package]
+name = "khangp0000_aoc_2024"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "2.0.3"
+reqwest = { version = "0.12.9", default-features = false, features = ["http2", "charset", "blocking", "rustls-tls"]}
+dotenv = "0.15.0"
+regex = "1.11.1"
+scraper = "0.21.0"
+bit-set = "0.8.0"
+chrono = "0.4.38"
+dashmap = "6.1.0"
+cacache-sync = "11.0.0"
+clap = { version = "4.5.23", features = ["derive"] }
+humantime = "2.1.0"
+chrono-tz = "0.10.0"
+
+[profile.release-lto]
+inherits = "release"
+lto = true
