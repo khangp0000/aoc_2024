@@ -1,4 +1,4 @@
-use std::cmp::Reverse;
+use std::cmp::{min, Reverse};
 use std::collections::BinaryHeap;
 use crate::error::Error;
 use crate::part_solver;
@@ -8,10 +8,18 @@ part_solver!();
 
 pub fn part1(input: &str) -> Result<ures, Error> {
     let data: Vec<u8> = parse_input(input)?;
-    Ok(CompactDataIter::new_borrow(data.as_slice())
-        .enumerate()
-        .map(|(id, val)| (id as ures) * (val as ures))
-        .sum())
+    let (_, sum) =CompactDataIter::new_borrow(data.as_slice())
+        .fold((0, 0), |(mut pos, mut sum): (ures, ures), (val, count)| {
+            let count = count as ures;
+            let val = val as ures;
+            if val != 0 {
+                sum += (2*pos+count-1)*count/2*val;
+            };
+            pos += count;
+            (pos, sum)
+        });
+
+    Ok(sum)
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
@@ -22,10 +30,11 @@ pub fn part2(input: &str) -> Result<ures, Error> {
         .enumerate()
         .skip(1) // skipping zero value
         .map(|(val, (pos, count))| {
-            let count = count as usize;
-            (2*pos + count - 1)*count / 2 * val
-        }).map(|v| v as ures)
-        .sum())
+            let count = count as ures;
+            let val = val as ures;
+            let pos = pos as ures;
+            (2*pos+count-1)*count/2*val
+        }).sum())
 }
 
 fn parse_input(input: &str) -> Result<Vec<u8>, Error> {
@@ -129,7 +138,7 @@ impl<'a> CompactDataIter<'a> {
 }
 
 impl<'a> Iterator for CompactDataIter<'a> {
-    type Item = usize;
+    type Item = (usize, u8);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_idx > self.rev_idx {
@@ -161,11 +170,15 @@ impl<'a> Iterator for CompactDataIter<'a> {
                 self.current_val = self.rev_idx / 2;
                 self.rev_left_over_count = self.disk[self.rev_idx];
             }
-            self.rev_left_over_count -= 1;
+            let min_count = min(self.rev_left_over_count, self.current_val_count);
+            self.rev_left_over_count -= min_count;
+            self.current_val_count -= min_count;
+            Some((self.current_val, min_count))
+        } else {
+            let count = self.current_val_count;
+            self.current_val_count = 0;
+            Some((self.current_val, count))
         }
-
-        self.current_val_count -= 1;
-        Some(self.current_val)
     }
 }
 
@@ -174,17 +187,7 @@ mod tests {
     use crate::error::Error;
     use crate::utils::tests_utils::get_input;
     use chrono::Utc;
-    use crate::y2024::day9::CompactDataIter;
 
-    #[test]
-    pub fn part_none() -> Result<(), Error> {
-        let v = vec![2,3,3,3,1,3,3,1,2,1,4,1,4,1,3,1,4,0,2];
-        CompactDataIter::new_borrow(&v)
-            .for_each(|v| println!("{}", v));
-        Ok(())
-    }
-
-    #[ignore]
     #[test]
     pub fn part1() -> Result<(), Error> {
         let input = get_input(2024, 9)?;
@@ -195,7 +198,6 @@ mod tests {
         Ok(())
     }
 
-    #[ignore]
     #[test]
     pub fn part2() -> Result<(), Error> {
         let start = Utc::now();
