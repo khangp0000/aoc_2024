@@ -27,9 +27,11 @@ struct Args {
     #[arg(short, long, requires = "day")]
     part: Option<u8>,
 
+    /// try to run submission. any failure will disable submission of next part in same day
     #[arg(short, long, default_value_t = false, default_missing_value = "true", num_args=0..=1, action = ArgAction::Set)]
     submit: bool,
 
+    /// if want to exit on failure without running subsequence day
     #[arg(short, long, default_value_t = false, default_missing_value = "true", num_args=0..=1, action = ArgAction::Set)]
     exit_on_failure: bool,
 }
@@ -55,12 +57,9 @@ fn main() {
         1..=2
     };
 
-    let mut submit = args.submit;
-
     let mut error_code = 0;
-
-
     'outer: for day in day_range {
+        let mut submit = args.submit;
         for part in part_range.clone() {
             let res = solve_and_print_result(year, day, part, session.as_str());
             if res.is_err() {

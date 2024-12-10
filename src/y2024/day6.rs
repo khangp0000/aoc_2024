@@ -258,16 +258,27 @@ fn parse_byte(b: u8) -> Result<u8, Error> {
 #[cfg(test)]
 mod tests {
     use crate::error::Error;
-    use crate::utils::tests_utils::get_input;
+    use crate::utils::tests_utils::{get_input, human_text_duration};
     use chrono::Utc;
 
     #[test]
     pub fn part1() -> Result<(), Error> {
-        let input = get_input(2024, 6)?;
         let start = Utc::now();
-        println!("Result: {}", super::part1(input.as_str())?);
-        let duration = Utc::now() - start;
-        println!("Runtime: {}", duration);
+        let input = get_input(2024, 6)?;
+        let input_finish = Utc::now();
+        let res = super::part1(input.as_str())?;
+        super::part2(input.as_str())?;
+        let run_finish = Utc::now();
+        println!("Result: {}", res);
+        println!(
+            "Input runtime: {}",
+            human_text_duration(input_finish - start)
+        );
+        println!(
+            "Solve runtime: {}",
+            human_text_duration(run_finish - input_finish)
+        );
+        println!("Total runtime: {}", human_text_duration(run_finish - start));
         Ok(())
     }
 
@@ -275,9 +286,20 @@ mod tests {
     pub fn part2() -> Result<(), Error> {
         let start = Utc::now();
         let input = get_input(2024, 6)?;
-        println!("Result: {}", super::part2(input.as_str())?);
-        let duration = Utc::now() - start;
-        println!("Runtime: {}", duration);
+        let input_finish = Utc::now();
+        let res = super::part2(input.as_str())?;
+        super::part2(input.as_str())?;
+        let run_finish = Utc::now();
+        println!("Result: {}", res);
+        println!(
+            "Input runtime: {}",
+            human_text_duration(input_finish - start)
+        );
+        println!(
+            "Solve runtime: {}",
+            human_text_duration(run_finish - input_finish)
+        );
+        println!("Total runtime: {}", human_text_duration(run_finish - start));
         Ok(())
     }
 }

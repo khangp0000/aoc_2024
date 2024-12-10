@@ -1,29 +1,30 @@
-use std::cmp::{min, Reverse};
-use std::collections::BinaryHeap;
 use crate::error::Error;
 use crate::part_solver;
 use crate::utils::ures;
+use std::cmp::{min, Reverse};
+use std::collections::BinaryHeap;
 
 part_solver!();
 
 pub fn part1(input: &str) -> Result<ures, Error> {
     let data: Vec<u8> = parse_input(input)?;
-    let (_, sum) =CompactDataIter::new_borrow(data.as_slice())
-        .fold((0, 0), |(mut pos, mut sum): (ures, ures), (val, count)| {
+    let (_, sum) = CompactDataIter::new_borrow(data.as_slice()).fold(
+        (0, 0),
+        |(mut pos, mut sum): (ures, ures), (val, count)| {
             let count = count as ures;
             let val = val as ures;
             if val != 0 {
-                sum += (2*pos+count-1)*count/2*val;
+                sum += (2 * pos + count - 1) * count / 2 * val;
             };
             pos += count;
             (pos, sum)
-        });
+        },
+    );
 
     Ok(sum)
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
-
     let data: Vec<u8> = parse_input(input)?;
     Ok(process_disk_part_2(data.into_iter())
         .into_iter()
@@ -33,58 +34,68 @@ pub fn part2(input: &str) -> Result<ures, Error> {
             let count = count as ures;
             let val = val as ures;
             let pos = pos as ures;
-            (2*pos+count-1)*count/2*val
-        }).sum())
+            (2 * pos + count - 1) * count / 2 * val
+        })
+        .sum())
 }
 
 fn parse_input(input: &str) -> Result<Vec<u8>, Error> {
     let input = input.trim();
-        input .as_bytes()
+    input
+        .as_bytes()
         .iter()
         .map(|b| {
             if b.is_ascii_digit() {
                 Ok(*b - b'0')
             } else {
-                Err(Error::ParseError(format!("invalid input, expect digit: {:?}", *b as char)))
+                Err(Error::ParseError(format!(
+                    "invalid input, expect digit: {:?}",
+                    *b as char
+                )))
             }
         })
         .try_fold(Vec::with_capacity(input.len()), |mut v, b| {
-           b.map(|b| {
-               v.push(b);
-               v
-           })
+            b.map(|b| {
+                v.push(b);
+                v
+            })
         })
 }
 
 fn process_disk_part_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize, u8)> {
     let len = disk.len();
-    let (_, mut loc_map, mut free_space_size_map) = disk.enumerate()
-        .fold((0, Vec::with_capacity(len), vec![None; 9]), |(mut pos,mut loc_map, mut free_space_size_map), (idx, size)| {
+    let (_, mut loc_map, mut free_space_size_map) = disk.enumerate().fold(
+        (0, Vec::with_capacity(len), vec![None; 9]),
+        |(mut pos, mut loc_map, mut free_space_size_map), (idx, size)| {
             if (idx % 2) == 0 {
                 loc_map.push((pos, size));
             } else {
                 if size > 0 {
                     let free_space_size_idx = size as usize - 1;
-                    free_space_size_map[free_space_size_idx].get_or_insert_with(BinaryHeap::new)
+                    free_space_size_map[free_space_size_idx]
+                        .get_or_insert_with(BinaryHeap::new)
                         .push(Reverse(pos));
                 }
             };
             pos += size as usize;
             (pos, loc_map, free_space_size_map)
-        });
+        },
+    );
 
-    loc_map.iter_mut()
-        .rev()
-        .for_each(|(pos, size)| {
-            if let Some(new_pos) = disk_realloc_part_2(*pos, *size, &mut free_space_size_map) {
-                *pos = new_pos
-            }
-        });
+    loc_map.iter_mut().rev().for_each(|(pos, size)| {
+        if let Some(new_pos) = disk_realloc_part_2(*pos, *size, &mut free_space_size_map) {
+            *pos = new_pos
+        }
+    });
 
     loc_map
 }
 
-fn disk_realloc_part_2(pos: usize, size: u8, free_space_size_map: &mut Vec<Option<BinaryHeap<Reverse<usize>>>>) -> Option<usize> {
+fn disk_realloc_part_2(
+    pos: usize,
+    size: u8,
+    free_space_size_map: &mut Vec<Option<BinaryHeap<Reverse<usize>>>>,
+) -> Option<usize> {
     if size == 0 {
         None
     } else {
@@ -92,16 +103,23 @@ fn disk_realloc_part_2(pos: usize, size: u8, free_space_size_map: &mut Vec<Optio
             .iter()
             .enumerate()
             .filter_map(|(new_free_size, heap)| {
-                heap.as_ref().and_then(|heap| heap.peek())
+                heap.as_ref()
+                    .and_then(|heap| heap.peek())
                     .map(|&Reverse(new_pos)| (new_pos, new_free_size))
             })
             .min()
             .filter(|(new_pos, _)| *new_pos < pos);
 
         if let Some((new_pos, new_free_size)) = min_free_pos_and_idx {
-            free_space_size_map[size as usize + new_free_size - 1].as_mut().unwrap().pop().unwrap();
+            free_space_size_map[size as usize + new_free_size - 1]
+                .as_mut()
+                .unwrap()
+                .pop()
+                .unwrap();
             if new_free_size > 0 {
-                free_space_size_map[new_free_size - 1].get_or_insert_default().push(Reverse(new_pos + size as usize));
+                free_space_size_map[new_free_size - 1]
+                    .get_or_insert_default()
+                    .push(Reverse(new_pos + size as usize));
             }
             Some(new_pos)
         } else {
@@ -142,12 +160,12 @@ impl<'a> Iterator for CompactDataIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_idx > self.rev_idx {
-            return None
+            return None;
         }
         while self.current_val_count == 0 {
             self.current_idx += 1;
             if self.current_idx > self.rev_idx {
-                return None
+                return None;
             } else if self.current_idx == self.rev_idx {
                 self.current_val = self.rev_idx / 2;
                 self.current_val_count = self.rev_left_over_count;
@@ -165,7 +183,7 @@ impl<'a> Iterator for CompactDataIter<'a> {
             while self.rev_left_over_count == 0 {
                 self.rev_idx -= 2;
                 if self.current_idx > self.rev_idx {
-                    return None
+                    return None;
                 }
                 self.current_val = self.rev_idx / 2;
                 self.rev_left_over_count = self.disk[self.rev_idx];
@@ -185,16 +203,27 @@ impl<'a> Iterator for CompactDataIter<'a> {
 #[cfg(test)]
 mod tests {
     use crate::error::Error;
-    use crate::utils::tests_utils::get_input;
+    use crate::utils::tests_utils::{get_input, human_text_duration};
     use chrono::Utc;
 
     #[test]
     pub fn part1() -> Result<(), Error> {
-        let input = get_input(2024, 9)?;
         let start = Utc::now();
-        println!("Result: {}", super::part1(input.as_str())?);
-        let duration = Utc::now() - start;
-        println!("Runtime: {}", duration);
+        let input = get_input(2024, 9)?;
+        let input_finish = Utc::now();
+        let res = super::part1(input.as_str())?;
+        super::part2(input.as_str())?;
+        let run_finish = Utc::now();
+        println!("Result: {}", res);
+        println!(
+            "Input runtime: {}",
+            human_text_duration(input_finish - start)
+        );
+        println!(
+            "Solve runtime: {}",
+            human_text_duration(run_finish - input_finish)
+        );
+        println!("Total runtime: {}", human_text_duration(run_finish - start));
         Ok(())
     }
 
@@ -202,9 +231,20 @@ mod tests {
     pub fn part2() -> Result<(), Error> {
         let start = Utc::now();
         let input = get_input(2024, 9)?;
-        println!("Result: {}", super::part2(input.as_str())?);
-        let duration = Utc::now() - start;
-        println!("Runtime: {}", duration);
+        let input_finish = Utc::now();
+        let res = super::part2(input.as_str())?;
+        super::part2(input.as_str())?;
+        let run_finish = Utc::now();
+        println!("Result: {}", res);
+        println!(
+            "Input runtime: {}",
+            human_text_duration(input_finish - start)
+        );
+        println!(
+            "Solve runtime: {}",
+            human_text_duration(run_finish - input_finish)
+        );
+        println!("Total runtime: {}", human_text_duration(run_finish - start));
         Ok(())
     }
 }

@@ -316,7 +316,10 @@ pub fn check_valid_question(year: u16, day: Option<u8>) -> Result<RangeInclusive
 #[cfg(test)]
 pub mod tests_utils {
     use crate::utils::UtilsError;
+    use chrono::TimeDelta;
     use dotenv::dotenv;
+    use humanize_duration::prelude::DurationExt;
+    use humanize_duration::Truncate;
     use std::env;
     use std::fmt::{Debug, Display};
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -338,6 +341,10 @@ pub mod tests_utils {
     pub fn get_input(year: u16, day: u8) -> Result<Arc<String>, UtilsError> {
         init();
         super::get_input(year, day, SESSION.get().unwrap())
+    }
+
+    pub fn human_text_duration(time_delta: TimeDelta) -> impl Display {
+        time_delta.human(Truncate::Nano)
     }
 
     #[allow(dead_code)]

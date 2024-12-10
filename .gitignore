@@ -24,4 +24,9 @@ Cargo.lock
 .env
 
 # input cache
-.cache
+cache/
+
+# perf analysis
+flamegraph.svg
+perf.data
+perf.data.old

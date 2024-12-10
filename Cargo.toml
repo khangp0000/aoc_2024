@@ -16,6 +16,8 @@ cacache-sync = "11.0.0"
 clap = { version = "4.5.23", features = ["derive"] }
 humantime = "2.1.0"
 chrono-tz = "0.10.0"
+bit-vec = "0.8.0"
+humanize-duration = { version = "0.0.6", features = ["chrono"] }
 
 [profile.release-lto]
 inherits = "release"
@@ -23,3 +25,4 @@ lto = true
 
 [profile.release]
 debug = true
+strip = false
