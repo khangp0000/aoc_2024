@@ -34,12 +34,23 @@ struct Args {
     /// if want to exit on failure without running subsequence day
     #[arg(short, long, default_value_t = false, default_missing_value = "true", num_args=0..=1, action = ArgAction::Set)]
     exit_on_failure: bool,
+
+    /// use `.env` file to load environment variable for session
+    #[arg(long, default_value_t = false, default_missing_value = "true", num_args=0..=1, action = ArgAction::Set)]
+    dotenv: bool,
+
+    /// environment key for session cookie
+    #[arg(short = 'c', long, default_value = "SESSION_COOKIE")]
+    session_env: String,
 }
 
 fn main() {
     let args = Args::parse();
-    let _ = dotenv();
-    let session = env::var("SESSION_COOKIE").expect("Missing cookie \"SESSION_COOKIE\"");
+    if args.dotenv {
+        dotenv().expect("Failed to load `.env` file");
+    }
+    let session = env::var(&args.session_env)
+        .unwrap_or_else(|_| panic!("Missing cookie, cannot find env {:?}", args.session_env));
     let (year, day, part) = (args.year, args.day, args.part);
     let day_range = check_valid_question(year, day);
 
