@@ -39,18 +39,19 @@ pub fn part2(input: &str) -> Result<ures, Error> {
 
 fn parse_line(line: &str) -> Result<(ures, Vec<ures>), Error> {
     let (left, right) = line.split_once(":").ok_or_else(|| {
-        Error::ParseError(format!("failed to parse {:?}: no 3 spaces delimiter", line))
+        Error::ParseError(format!("failed to parse {:?}: no 3 spaces delimiter", line).into())
     })?;
 
     let target_val = ures::from_str(left)
-        .map_err(|e| Error::ParseError(format!("failed to parse: {:?}: {}", line, e)))?;
+        .map_err(|e| Error::ParseError(format!("failed to parse: {:?}: {}", line, e).into()))?;
 
     let vec = right
         .trim()
         .split(" ")
         .map(|val| {
-            ures::from_str(val)
-                .map_err(|e| Error::ParseError(format!("failed to parse: {:?}: {}", line, e)))
+            ures::from_str(val).map_err(|e| {
+                Error::ParseError(format!("failed to parse: {:?}: {}", line, e).into())
+            })
         })
         .try_fold(Vec::new(), |mut vec, val| {
             val.map(|val| {
@@ -62,8 +63,9 @@ fn parse_line(line: &str) -> Result<(ures, Vec<ures>), Error> {
 }
 
 fn check_1(target_val: ures, vec: &[ures]) -> Result<Option<ures>, Error> {
-    let &first = vec.first()
-        .ok_or_else(|| Error::ParseError("right hand side of colon missing".to_string()))?;
+    let &first = vec
+        .first()
+        .ok_or_else(|| Error::ParseError("right hand side of colon missing".into()))?;
     if check_1_inner(target_val, first, vec[1..].iter()) {
         Ok(Some(target_val))
     } else {
@@ -93,8 +95,9 @@ fn check_1_inner<
 }
 
 fn check_2(target_val: ures, vec: &[ures]) -> Result<Option<ures>, Error> {
-    let &first = vec.first()
-        .ok_or_else(|| Error::ParseError("right hand side of colon missing".to_string()))?;
+    let &first = vec
+        .first()
+        .ok_or_else(|| Error::ParseError("right hand side of colon missing".into()))?;
     if check_2_inner(target_val, first, vec[1..].iter()) {
         Ok(Some(target_val))
     } else {

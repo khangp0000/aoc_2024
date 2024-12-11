@@ -79,7 +79,7 @@ fn is_valid(list: &Vec<usize>, relationship: &ChildrenRelationShip) -> bool {
 
 fn parse_input(input: &str) -> Result<(ChildrenRelationShip, Vec<Vec<usize>>), Error> {
     let (left, right) = input.split_once("\n\n").ok_or_else(|| {
-        Error::ParseError("Failed to parse day 5 input: no empty line delimiter".to_string())
+        Error::ParseError("Failed to parse day 5 input: no empty line delimiter".into())
     })?;
     Ok((parse_relationship(left)?, parse_list(right)?))
 }
@@ -96,13 +96,15 @@ fn parse_relationship(input: &str) -> Result<ChildrenRelationShip, Error> {
 }
 
 fn parse_relationship_line(line: &str) -> Result<(usize, usize), Error> {
-    let (left, right) = line
-        .split_once("|")
-        .ok_or_else(|| Error::ParseError(format!("Failed to parse {:?}: no | delimiter", line)))?;
-    let left = usize::from_str(left)
-        .map_err(|e| Error::ParseError(format!("Failed to parse ures: {:?}: {}", line, e)))?;
-    let right = usize::from_str(right)
-        .map_err(|e| Error::ParseError(format!("Failed to parse ures: {:?}: {}", line, e)))?;
+    let (left, right) = line.split_once("|").ok_or_else(|| {
+        Error::ParseError(format!("Failed to parse {:?}: no | delimiter", line).into())
+    })?;
+    let left = usize::from_str(left).map_err(|e| {
+        Error::ParseError(format!("Failed to parse ures: {:?}: {}", line, e).into())
+    })?;
+    let right = usize::from_str(right).map_err(|e| {
+        Error::ParseError(format!("Failed to parse ures: {:?}: {}", line, e).into())
+    })?;
     Ok((left, right))
 }
 
@@ -119,8 +121,9 @@ fn parse_list(input: &str) -> Result<Vec<Vec<usize>>, Error> {
 fn parse_list_line(line: &str) -> Result<Vec<usize>, Error> {
     line.split(",")
         .map(|val| {
-            usize::from_str(val)
-                .map_err(|e| Error::ParseError(format!("Failed to parse: {:?}: {}", line, e)))
+            usize::from_str(val).map_err(|e| {
+                Error::ParseError(format!("Failed to parse: {:?}: {}", line, e).into())
+            })
         })
         .try_fold(Vec::new(), |mut vec, val| {
             vec.push(val?);

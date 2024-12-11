@@ -22,7 +22,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
 fn parse_input(input: &str) -> impl Iterator<Item = Result<u64, Error>> + use<'_> {
     input.split(" ").map(|s| {
         u64::from_str(s).map_err(|e| {
-            Error::ParseError(format!("Failed to parse unsigned integer: {:?}: {}", s, e))
+            Error::ParseError(format!("Failed to parse unsigned integer: {:?}: {}", s, e).into())
         })
     })
 }
@@ -37,7 +37,7 @@ fn blink(val: u64) -> Result<Vec<u64>, Error> {
             vec![val / mult, val % mult]
         } else {
             vec![val.checked_mul(2024).ok_or_else(|| {
-                Error::InvalidState("number is too large, not fitting in u64".to_string())
+                Error::InvalidState("number is too large, not fitting in u64".into())
             })?]
         }
     };

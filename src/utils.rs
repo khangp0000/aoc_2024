@@ -6,6 +6,7 @@ use dashmap::DashMap;
 use regex::Regex;
 use reqwest::blocking::Client;
 use scraper::{Html, Selector};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::ops::RangeInclusive;
@@ -43,10 +44,9 @@ macro_rules! part_solver {
             match part {
                 1 => part1(input).map(|v| Box::new(v) as Box<dyn $crate::utils::DisplayDebug>),
                 2 => part2(input).map(|v| Box::new(v) as Box<dyn $crate::utils::DisplayDebug>),
-                p => Err($crate::error::Error::InvalidState(format!(
-                    "solver not found for part: {}",
-                    p
-                ))),
+                p => Err($crate::error::Error::InvalidState(
+                    format!("solver not found for part: {}", p).into(),
+                )),
             }
         }
     };
@@ -87,10 +87,9 @@ macro_rules! day_solver {
                 23 => day23::solve(part, input),
                 24 => day24::solve(part, input),
                 25 => day25::solve(part, input),
-                d => Err($crate::error::Error::InvalidState(format!(
-                    "solver not found for day: {}",
-                    d
-                ))),
+                d => Err($crate::error::Error::InvalidState(
+                    format!("solver not found for day: {}", d).into(),
+                )),
             }
         }
     };
@@ -100,10 +99,9 @@ macro_rules! day_solver {
 pub fn solve(year: u16, day: u8, part: u8, input: &str) -> Result<Box<dyn DisplayDebug>, Error> {
     match year {
         2024 => y2024::solve(day, part, input),
-        y => Err(Error::InvalidState(format!(
-            "solver not found for year: {}",
-            y
-        ))),
+        y => Err(Error::InvalidState(
+            format!("solver not found for year: {}", y).into(),
+        )),
     }
 }
 
@@ -116,23 +114,23 @@ fn default_reqwest_client() -> Client {
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum UtilsError {
     #[error("error with disk cache: `{0}`")]
-    DiskCacheError(String),
+    DiskCacheError(Cow<'static, str>),
     #[error("error with reqwest: `{0}`")]
-    ReqwestError(String),
+    ReqwestError(Cow<'static, str>),
     #[error("response status code is not success: `{0}`")]
-    ResponseStatusError(String),
+    ResponseStatusError(Cow<'static, str>),
     #[error("error retrieve response body as utf8 string: `{0}`")]
-    ResponseStringBodyError(String),
+    ResponseStringBodyError(Cow<'static, str>),
     #[error("submitted answer was incorrect: `{0}`")]
-    IncorrectAnswer(String),
+    IncorrectAnswer(Cow<'static, str>),
     #[error("already submitted: `{0}`")]
-    AlreadySubmitted(String),
+    AlreadySubmitted(Cow<'static, str>),
     #[error("submission throttled: `{0}`")]
-    SubmissionThrottled(String, Option<Duration>),
+    SubmissionThrottled(Cow<'static, str>, Option<Duration>),
     #[error("regex error: `{0}`")]
-    RegexError(String),
+    RegexError(Cow<'static, str>),
     #[error("invalid aoc problem: `{0}`")]
-    InvalidAOCProblem(String),
+    InvalidAOCProblem(Cow<'static, str>),
 }
 
 pub fn get_input(year: u16, day: u8, session: &str) -> Result<Arc<String>, UtilsError> {
@@ -149,10 +147,9 @@ pub fn get_input(year: u16, day: u8, session: &str) -> Result<Arc<String>, Utils
         .map(String::from_utf8)
         .map(|r| {
             r.map_err(|e| {
-                UtilsError::DiskCacheError(format!(
-                    "failed to read value of key as utf-8 {:?}: {}",
-                    key, e
-                ))
+                UtilsError::DiskCacheError(
+                    format!("failed to read value of key as utf-8 {:?}: {}", key, e).into(),
+                )
             })
         })
         .unwrap_or_else(|| {
@@ -163,11 +160,11 @@ pub fn get_input(year: u16, day: u8, session: &str) -> Result<Arc<String>, Utils
                 .get(&url)
                 .header("Cookie", cookie)
                 .send()
-                .map_err(|e| UtilsError::ReqwestError(format!("{:?}", e)))?
+                .map_err(|e| UtilsError::ReqwestError(format!("{:?}", e).into()))?
                 .error_for_status()
-                .map_err(|e| UtilsError::ResponseStatusError(format!("{:?}", e)))?
+                .map_err(|e| UtilsError::ResponseStatusError(format!("{:?}", e).into()))?
                 .text_with_charset("utf-8")
-                .map_err(|e| UtilsError::ResponseStringBodyError(format!("{:?}", e)))
+                .map_err(|e| UtilsError::ResponseStringBodyError(format!("{:?}", e).into()))
                 .inspect(|value| {
                     let _ = cacache_sync::write("./cache", &*key, value.as_bytes());
                 })
@@ -198,37 +195,38 @@ pub fn submit<A: Display + Debug>(
         .header("Cookie", cookie)
         .form(&params)
         .send()
-        .map_err(|e| UtilsError::ReqwestError(format!("{:?}", e)))?
+        .map_err(|e| UtilsError::ReqwestError(format!("{:?}", e).into()))?
         .error_for_status()
-        .map_err(|e| UtilsError::ResponseStatusError(format!("{:?}", e)))?
+        .map_err(|e| UtilsError::ResponseStatusError(format!("{:?}", e).into()))?
         .text_with_charset("utf-8")
-        .map_err(|e| UtilsError::ResponseStringBodyError(format!("{:?}", e)))?;
+        .map_err(|e| UtilsError::ResponseStringBodyError(format!("{:?}", e).into()))?;
 
     let dom = Html::parse_document(body.as_str());
     let main_selector = Selector::parse("main").unwrap();
     if let Some(main_body) = dom.select(&main_selector).next() {
         let main_body_text = main_body.text().collect::<String>();
         if main_body_text.contains("not the right answer") {
-            return Err(UtilsError::IncorrectAnswer(format!(
-                "answer {:?} for {} day {} part {}",
-                answer, year, day, part
-            )));
+            return Err(UtilsError::IncorrectAnswer(
+                format!("answer {:?} for {} day {} part {}", answer, year, day, part).into(),
+            ));
         }
         if main_body_text.contains("already complete it") {
-            return Err(UtilsError::AlreadySubmitted(format!(
-                "{} day {} part {}",
-                year, day, part
-            )));
+            return Err(UtilsError::AlreadySubmitted(
+                format!("{} day {} part {}", year, day, part).into(),
+            ));
         }
         if main_body_text.contains("gave an answer too recently") {
             static RE: OnceLock<Result<Regex, UtilsError>> = OnceLock::new();
             let regex = RE
                 .get_or_init(|| {
                     Regex::new(r"You have (.+) left to wait.").map_err(|e| {
-                        UtilsError::RegexError(format!(
-                            "failed to init regex `{}`: {}",
-                            r"You have (.+) left to wait.", e
-                        ))
+                        UtilsError::RegexError(
+                            format!(
+                                "failed to init regex `{}`: {}",
+                                r"You have (.+) left to wait.", e
+                            )
+                            .into(),
+                        )
                     })
                 })
                 .as_ref()
@@ -243,7 +241,8 @@ pub fn submit<A: Display + Debug>(
                         format!(
                             "{} day {} part {}: failed to parse throttling time",
                             year, day, part,
-                        ),
+                        )
+                        .into(),
                         None,
                     )
                 })?;
@@ -252,7 +251,8 @@ pub fn submit<A: Display + Debug>(
                     format!(
                         "{} day {} part {}: failed to parse throttling time: {}",
                         year, day, part, e
-                    ),
+                    )
+                    .into(),
                     None,
                 )
             })?;
@@ -264,7 +264,8 @@ pub fn submit<A: Display + Debug>(
                     day,
                     part,
                     humantime::format_duration(duration)
-                ),
+                )
+                .into(),
                 Some(duration),
             ));
         }
@@ -275,34 +276,33 @@ pub fn submit<A: Display + Debug>(
 pub fn check_valid_question(year: u16, day: Option<u8>) -> Result<RangeInclusive<u8>, UtilsError> {
     let now_eastern = Utc::now().with_timezone(&Eastern);
     if now_eastern.year() < year as i32 {
-        return Err(UtilsError::InvalidAOCProblem(format!("year {}", year)));
+        return Err(UtilsError::InvalidAOCProblem(
+            format!("year {}", year).into(),
+        ));
     }
 
     if now_eastern.year() > year as i32 {
         if let Some(day) = day {
             match day {
                 1..=25 => Ok(day..=day),
-                _ => Err(UtilsError::InvalidAOCProblem(format!(
-                    "year {} day {}",
-                    year, day
-                ))),
+                _ => Err(UtilsError::InvalidAOCProblem(
+                    format!("year {} day {}", year, day).into(),
+                )),
             }
         } else {
             Ok(1..=25)
         }
     } else if now_eastern.month() < 12 {
-        Err(UtilsError::InvalidAOCProblem(format!(
-            "not December for current year {}",
-            year
-        )))
+        Err(UtilsError::InvalidAOCProblem(
+            format!("not December for current year {}", year).into(),
+        ))
     } else if let Some(day) = day {
         if day >= 1 && (day as u32) <= now_eastern.day() {
             Ok(day..=day)
         } else {
-            Err(UtilsError::InvalidAOCProblem(format!(
-                "the time has not come year {} day {}",
-                year, day
-            )))
+            Err(UtilsError::InvalidAOCProblem(
+                format!("the time has not come year {} day {}", year, day).into(),
+            ))
         }
     } else {
         Ok(1..=now_eastern.day() as u8)

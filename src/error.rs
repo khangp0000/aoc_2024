@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Clone)]
@@ -6,9 +7,9 @@ pub enum Error {
     #[error(transparent)]
     UtilsError(#[from] crate::utils::UtilsError),
     #[error("parsing error: `{0}`")]
-    ParseError(String),
+    ParseError(Cow<'static, str>),
     #[error("invalid state: `{0}`")]
-    InvalidState(String),
+    InvalidState(Cow<'static, str>),
     #[error("initialization error: `{0}`")]
-    InitError(String),
+    InitError(Cow<'static, str>),
 }

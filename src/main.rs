@@ -90,7 +90,10 @@ fn main() {
                                 year, day, part
                             );
                         }
-                        Error::UtilsError(utils::UtilsError::SubmissionThrottled(_, Some(duration))) => {
+                        Error::UtilsError(utils::UtilsError::SubmissionThrottled(
+                            _,
+                            Some(duration),
+                        )) => {
                             println!(
                                 "Submission for {} day {} part {} is throttled: {}. Waiting for throttle to finish...",
                                 year, day, part, humantime::format_duration(*duration)

@@ -21,10 +21,10 @@ pub fn part1(input: &str) -> Result<ures, Error> {
     while !heap1.is_empty() {
         let left = heap1
             .pop()
-            .ok_or_else(|| Error::InvalidState("heap1 should not be empty".to_string()))?;
+            .ok_or_else(|| Error::InvalidState("heap1 should not be empty".into()))?;
         let right = heap2
             .pop()
-            .ok_or_else(|| Error::InvalidState("heap2 should not be empty".to_string()))?;
+            .ok_or_else(|| Error::InvalidState("heap2 should not be empty".into()))?;
         sum += left.abs_diff(right);
     }
 
@@ -61,12 +61,12 @@ pub fn part2(input: &str) -> Result<ures, Error> {
 
 fn parse_line(line: &str) -> Result<(ures, ures), Error> {
     let (left, right) = line.split_once("   ").ok_or_else(|| {
-        Error::ParseError(format!("Failed to parse {:?}: no 3 spaces delimiter", line))
+        Error::ParseError(format!("Failed to parse {:?}: no 3 spaces delimiter", line).into())
     })?;
     let left = ures::from_str(left)
-        .map_err(|e| Error::ParseError(format!("Failed to parse: {:?}: {}", line, e)))?;
+        .map_err(|e| Error::ParseError(format!("Failed to parse: {:?}: {}", line, e).into()))?;
     let right = ures::from_str(right)
-        .map_err(|e| Error::ParseError(format!("Failed to parse: {:?}: {}", line, e)))?;
+        .map_err(|e| Error::ParseError(format!("Failed to parse: {:?}: {}", line, e).into()))?;
     Ok((left, right))
 }
 

@@ -34,7 +34,7 @@ fn parse_line(line: &str) -> Result<Vec<ires>, Error> {
     line.split(' ')
         .map(|num| {
             ires::from_str(num)
-                .map_err(|e| Error::ParseError(format!("Failed to parse {:?}: {}", line, e)))
+                .map_err(|e| Error::ParseError(format!("Failed to parse {:?}: {}", line, e).into()))
         })
         .try_fold(Vec::new(), |mut vec, val| {
             val.map(|val| {

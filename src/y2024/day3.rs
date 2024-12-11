@@ -13,10 +13,9 @@ pub fn part1(input: &str) -> Result<ures, Error> {
     let regex = RE
         .get_or_init(|| {
             Regex::new(r"mul\((\d+),(\d+)\)").map_err(|e| {
-                Error::InitError(format!(
-                    "failed to init regex `{}`: {}",
-                    r"mul\((\d+),(\d+)\)", e
-                ))
+                Error::InitError(
+                    format!("failed to init regex `{}`: {}", r"mul\((\d+),(\d+)\)", e).into(),
+                )
             })
         })
         .as_ref()
@@ -48,17 +47,17 @@ fn mul_capture<'a, C: Borrow<Captures<'a>>>(captures: C) -> Result<ures, Error> 
     let val1 = captures
         .borrow()
         .get(1)
-        .ok_or_else(|| Error::InvalidState("Capture should have group 1".to_string()))?
+        .ok_or_else(|| Error::InvalidState("Capture should have group 1".into()))?
         .as_str();
     let val2 = captures
         .borrow()
         .get(2)
-        .ok_or_else(|| Error::InvalidState("Capture should have group 2".to_string()))?
+        .ok_or_else(|| Error::InvalidState("Capture should have group 2".into()))?
         .as_str();
     let val1 = ures::from_str(val1)
-        .map_err(|e| Error::ParseError(format!("Failed to parse {:?}: {}", val1, e)))?;
+        .map_err(|e| Error::ParseError(format!("Failed to parse {:?}: {}", val1, e).into()))?;
     let val2 = ures::from_str(val2)
-        .map_err(|e| Error::ParseError(format!("Failed to parse {:?}: {}", val2, e)))?;
+        .map_err(|e| Error::ParseError(format!("Failed to parse {:?}: {}", val2, e).into()))?;
     Ok(val1 * val2)
 }
 

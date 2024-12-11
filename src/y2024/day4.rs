@@ -146,9 +146,7 @@ fn parse_input(input: &str) -> Result<(Vec<&str>, usize), Error> {
         lines
             .try_fold(board, |mut vec, next_line| {
                 if next_line.len() != first_line_len {
-                    Err(Error::ParseError(
-                        "Not all line have same length!".to_string(),
-                    ))
+                    Err(Error::ParseError("Not all line have same length!".into()))
                 } else {
                     vec.push(next_line);
                     Ok(vec)

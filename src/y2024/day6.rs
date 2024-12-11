@@ -198,10 +198,9 @@ fn parse_input(input: &str) -> Result<(Board2d<u8>, Guard), Error> {
                 (Vec::with_capacity(len), None),
                 |(mut vec, mut x), (index, b)| {
                     let b = b?;
-                    if b != Mask::Wall as u8 && b != Mask::Empty as u8 && x.replace(index).is_some() {
-                        return Err(Error::ParseError(
-                            "more than 1 starting position".to_string(),
-                        ));
+                    if b != Mask::Wall as u8 && b != Mask::Empty as u8 && x.replace(index).is_some()
+                    {
+                        return Err(Error::ParseError("more than 1 starting position".into()));
                     }
                     vec.push(b);
                     Ok((vec, x))
@@ -213,9 +212,7 @@ fn parse_input(input: &str) -> Result<(Board2d<u8>, Guard), Error> {
             let (board_line, x) = line?;
             if let Some(x) = x {
                 if start.replace((x, y)).is_some() {
-                    return Err(Error::ParseError(
-                        "more than 1 starting position".to_string(),
-                    ));
+                    return Err(Error::ParseError("more than 1 starting position".into()));
                 }
             }
             board.push(board_line);
@@ -223,13 +220,14 @@ fn parse_input(input: &str) -> Result<(Board2d<u8>, Guard), Error> {
         })?;
     let board: Board2d<u8> = board.into();
     let coord: [usize; 2] = start
-        .ok_or_else(|| Error::ParseError("starting position not found".to_string()))?
+        .ok_or_else(|| Error::ParseError("starting position not found".into()))?
         .into();
-    let direction =
-        Direction::from_mask_u8(*board.get(&coord).ok_or_else(|| {
-            Error::InvalidState("cannot get value at start position".to_string())
-        })?)
-        .map_err(|val| Error::ParseError(format!("invalid u8 value for direction: {}", val)))?;
+    let direction = Direction::from_mask_u8(
+        *board
+            .get(&coord)
+            .ok_or_else(|| Error::InvalidState("cannot get value at start position".into()))?,
+    )
+    .map_err(|val| Error::ParseError(format!("invalid u8 value for direction: {}", val).into()))?;
     let guard = Guard {
         coord,
         facing: direction,
@@ -246,10 +244,9 @@ fn parse_byte(b: u8) -> Result<u8, Error> {
         b'<' => Ok(Mask::Left as u8),
         b'#' => Ok(Mask::Wall as u8),
         b'.' => Ok(Mask::Empty as u8),
-        _ => Err(Error::ParseError(format!(
-            "Invalid character: {:?}",
-            b as char
-        ))),
+        _ => Err(Error::ParseError(
+            format!("Invalid character: {:?}", b as char).into(),
+        )),
     }
 }
 

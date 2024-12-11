@@ -48,10 +48,9 @@ fn parse_input(input: &str) -> Result<Vec<u8>, Error> {
             if b.is_ascii_digit() {
                 Ok(*b - b'0')
             } else {
-                Err(Error::ParseError(format!(
-                    "invalid input, expect digit: {:?}",
-                    *b as char
-                )))
+                Err(Error::ParseError(
+                    format!("invalid input, expect digit: {:?}", *b as char).into(),
+                ))
             }
         })
         .try_fold(Vec::with_capacity(input.len()), |mut v, b| {

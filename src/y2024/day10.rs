@@ -71,39 +71,45 @@ fn find_path_count(
     let [x, y] = *pos;
     let mut sum = 0;
     let valid_next_val = val + 1;
-    if let Some(count) = x.checked_sub(1)
+    if let Some(count) = x
+        .checked_sub(1)
         .and_then(|x| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val)) {
+        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val))
+    {
         sum += count;
     }
 
     if let Some(count) = board
         .get(&[x + 1, y])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count(board, visited_set, &[x + 1, y], *val)) {
+        .map(|val| find_path_count(board, visited_set, &[x + 1, y], *val))
+    {
         sum += count
     }
 
-    if let Some(count) = y.checked_sub(1)
+    if let Some(count) = y
+        .checked_sub(1)
         .and_then(|y| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val)) {
+        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val))
+    {
         sum += count;
     }
 
     if let Some(count) = board
         .get(&[x, y + 1])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count(board, visited_set, &[x, y + 1], *val)) {
+        .map(|val| find_path_count(board, visited_set, &[x, y + 1], *val))
+    {
         sum += count;
     }
 
@@ -132,39 +138,45 @@ fn find_path_count_2(
     let [x, y] = *pos;
     let mut sum = 0;
     let valid_next_val = val + 1;
-    if let Some(count) = x.checked_sub(1)
+    if let Some(count) = x
+        .checked_sub(1)
         .and_then(|x| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val)) {
+        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val))
+    {
         sum += count;
     }
 
     if let Some(count) = board
         .get(&[x + 1, y])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count_2(board, cache, &[x + 1, y], *val)) {
+        .map(|val| find_path_count_2(board, cache, &[x + 1, y], *val))
+    {
         sum += count;
     }
 
-    if let Some(count) = y.checked_sub(1)
+    if let Some(count) = y
+        .checked_sub(1)
         .and_then(|y| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val)) {
+        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val))
+    {
         sum += count;
     }
 
     if let Some(count) = board
         .get(&[x, y + 1])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count_2(board, cache, &[x, y + 1], *val)) {
+        .map(|val| find_path_count_2(board, cache, &[x, y + 1], *val))
+    {
         sum += count;
     }
 
