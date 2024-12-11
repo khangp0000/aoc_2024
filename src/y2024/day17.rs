@@ -25,7 +25,6 @@ mod tests {
         let input = get_input(2024, 17)?;
         let input_finish = Utc::now();
         let res = super::part1(input.as_str())?;
-        super::part2(input.as_str())?;
         let run_finish = Utc::now();
         println!("Result: {}", res);
         println!(
@@ -47,7 +46,6 @@ mod tests {
         let input = get_input(2024, 17)?;
         let input_finish = Utc::now();
         let res = super::part2(input.as_str())?;
-        super::part2(input.as_str())?;
         let run_finish = Utc::now();
         println!("Result: {}", res);
         println!(

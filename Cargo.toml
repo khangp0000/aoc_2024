@@ -18,6 +18,7 @@ humantime = "2.1.0"
 chrono-tz = "0.10.0"
 bit-vec = "0.8.0"
 humanize-duration = { version = "0.0.6", features = ["chrono"] }
+lru = "0.12.5"
 
 [profile.release-lto]
 inherits = "release"
