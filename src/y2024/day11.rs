@@ -53,13 +53,11 @@ fn blink_count_with_cache<const N: usize>(
     if target_count == 0 {
         Ok(1)
     } else {
-        if val < 10000 {
-            if let Some(Some(count)) = cache
-                .get(val as usize)
-                .and_then(|v| v.get(target_count as usize))
-            {
-                return Ok(*count);
-            }
+        if let Some(Some(count)) = cache
+            .get(val as usize)
+            .and_then(|v| v.get(target_count as usize))
+        {
+            return Ok(*count);
         }
         let mut sum = 0;
         for val in blink(val)?.into_iter() {
