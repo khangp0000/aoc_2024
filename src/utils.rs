@@ -16,7 +16,7 @@ use thiserror::Error;
 
 pub trait DisplayDebug: Display + Debug {}
 
-impl<T: Display + Debug + Clone> DisplayDebug for T {}
+impl<T: Display + Debug> DisplayDebug for T {}
 
 #[cfg(any(target_pointer_width = "16", target_pointer_width = "32"))]
 #[allow(non_camel_case_types)]
@@ -39,11 +39,11 @@ macro_rules! part_solver {
         pub fn solve(
             part: u8,
             input: &str,
-        ) -> Result<Box<dyn crate::utils::DisplayDebug>, crate::error::Error> {
+        ) -> Result<Box<dyn $crate::utils::DisplayDebug>, $crate::error::Error> {
             match part {
-                1 => part1(input).map(|v| Box::new(v) as Box<dyn crate::utils::DisplayDebug>),
-                2 => part2(input).map(|v| Box::new(v) as Box<dyn crate::utils::DisplayDebug>),
-                p => Err(crate::error::Error::InvalidState(format!(
+                1 => part1(input).map(|v| Box::new(v) as Box<dyn $crate::utils::DisplayDebug>),
+                2 => part2(input).map(|v| Box::new(v) as Box<dyn $crate::utils::DisplayDebug>),
+                p => Err($crate::error::Error::InvalidState(format!(
                     "solver not found for part: {}",
                     p
                 ))),
@@ -60,7 +60,7 @@ macro_rules! day_solver {
             day: u8,
             part: u8,
             input: &str,
-        ) -> Result<Box<dyn crate::utils::DisplayDebug>, crate::error::Error> {
+        ) -> Result<Box<dyn $crate::utils::DisplayDebug>, $crate::error::Error> {
             match day {
                 1 => day1::solve(part, input),
                 2 => day2::solve(part, input),
@@ -87,7 +87,7 @@ macro_rules! day_solver {
                 23 => day23::solve(part, input),
                 24 => day24::solve(part, input),
                 25 => day25::solve(part, input),
-                d => Err(crate::error::Error::InvalidState(format!(
+                d => Err($crate::error::Error::InvalidState(format!(
                     "solver not found for day: {}",
                     d
                 ))),
@@ -136,7 +136,7 @@ pub enum UtilsError {
 }
 
 pub fn get_input(year: u16, day: u8, session: &str) -> Result<Arc<String>, UtilsError> {
-    static REQWEST_CLIENT: LazyLock<Client> = LazyLock::new(|| default_reqwest_client());
+    static REQWEST_CLIENT: LazyLock<Client> = LazyLock::new(default_reqwest_client);
     static MEM_CACHE: LazyLock<DashMap<String, Arc<String>>> = LazyLock::new(DashMap::new);
 
     let key = Rc::new(format!("{}_{}_{}", year, day, session));
@@ -290,38 +290,34 @@ pub fn check_valid_question(year: u16, day: Option<u8>) -> Result<RangeInclusive
         } else {
             Ok(1..=25)
         }
-    } else {
-        if now_eastern.month() < 12 {
-            Err(UtilsError::InvalidAOCProblem(format!(
-                "not December for current year {}",
-                year
-            )))
+    } else if now_eastern.month() < 12 {
+        Err(UtilsError::InvalidAOCProblem(format!(
+            "not December for current year {}",
+            year
+        )))
+    } else if let Some(day) = day {
+        if day >= 1 && (day as u32) <= now_eastern.day() {
+            Ok(day..=day)
         } else {
-            if let Some(day) = day {
-                if day >= 1 && (day as u32) <= now_eastern.day() {
-                    Ok(day..=day)
-                } else {
-                    Err(UtilsError::InvalidAOCProblem(format!(
-                        "the time has not come year {} day {}",
-                        year, day
-                    )))
-                }
-            } else {
-                Ok(1..=now_eastern.day() as u8)
-            }
+            Err(UtilsError::InvalidAOCProblem(format!(
+                "the time has not come year {} day {}",
+                year, day
+            )))
         }
+    } else {
+        Ok(1..=now_eastern.day() as u8)
     }
 }
 
 #[cfg(test)]
 pub mod tests_utils {
-    use crate::utils::UtilsError;
+    use crate::utils::{DisplayDebug, UtilsError};
     use chrono::TimeDelta;
     use dotenv::dotenv;
     use humanize_duration::prelude::DurationExt;
     use humanize_duration::Truncate;
     use std::env;
-    use std::fmt::{Debug, Display};
+    use std::fmt::Display;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Arc, OnceLock};
 
@@ -348,7 +344,7 @@ pub mod tests_utils {
     }
 
     #[allow(dead_code)]
-    pub fn submit<A: Display + Debug>(
+    pub fn submit<A: DisplayDebug>(
         year: u16,
         day: u8,
         part: u8,

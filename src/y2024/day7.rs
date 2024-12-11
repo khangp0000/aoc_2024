@@ -61,9 +61,8 @@ fn parse_line(line: &str) -> Result<(ures, Vec<ures>), Error> {
     Ok((target_val, vec))
 }
 
-fn check_1(target_val: ures, vec: &Vec<ures>) -> Result<Option<ures>, Error> {
-    let &first = vec
-        .get(0)
+fn check_1(target_val: ures, vec: &[ures]) -> Result<Option<ures>, Error> {
+    let &first = vec.first()
         .ok_or_else(|| Error::ParseError("right hand side of colon missing".to_string()))?;
     if check_1_inner(target_val, first, vec[1..].iter()) {
         Ok(Some(target_val))
@@ -93,9 +92,8 @@ fn check_1_inner<
     }
 }
 
-fn check_2(target_val: ures, vec: &Vec<ures>) -> Result<Option<ures>, Error> {
-    let &first = vec
-        .get(0)
+fn check_2(target_val: ures, vec: &[ures]) -> Result<Option<ures>, Error> {
+    let &first = vec.first()
         .ok_or_else(|| Error::ParseError("right hand side of colon missing".to_string()))?;
     if check_2_inner(target_val, first, vec[1..].iter()) {
         Ok(Some(target_val))

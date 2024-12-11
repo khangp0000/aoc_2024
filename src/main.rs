@@ -90,24 +90,23 @@ fn main() {
                                 year, day, part
                             );
                         }
-                        Error::UtilsError(utils::UtilsError::SubmissionThrottled(_, duration)) => {
-                            if let Some(duration) = duration {
-                                println!(
-                                        "Submission for {} day {} part {} is throttled: {}. Waiting for throttle to finish...",
-                                        year, day, part, humantime::format_duration(*duration)
-                                    );
-                                retry = Some(*duration);
-                            } else {
-                                error_code = 1;
-                                eprintln!(
-                                    "Disabling submission due to previous submission error: {:?}",
-                                    res
-                                );
-                                submit = false;
-                                if args.exit_on_failure {
-                                    eprintln!("Exit early on error: {:?}", res);
-                                    break 'outer;
-                                }
+                        Error::UtilsError(utils::UtilsError::SubmissionThrottled(_, Some(duration))) => {
+                            println!(
+                                "Submission for {} day {} part {} is throttled: {}. Waiting for throttle to finish...",
+                                year, day, part, humantime::format_duration(*duration)
+                            );
+                            retry = Some(*duration);
+                        }
+                        Error::UtilsError(utils::UtilsError::SubmissionThrottled(_, None)) => {
+                            error_code = 1;
+                            eprintln!(
+                                "Disabling submission due to previous submission error: {:?}",
+                                res
+                            );
+                            submit = false;
+                            if args.exit_on_failure {
+                                eprintln!("Exit early on error: {:?}", res);
+                                break 'outer;
                             }
                         }
                         _ => {
@@ -149,7 +148,7 @@ fn submit_result(
     year: u16,
     day: u8,
     part: u8,
-    answer: &Box<dyn DisplayDebug>,
+    answer: &dyn DisplayDebug,
     session: &str,
 ) -> Result<(), Error> {
     Ok(submit(year, day, part, answer, session)?)

@@ -30,7 +30,7 @@ pub fn part1(input: &str) -> Result<ures, Error> {
 
 pub fn part2(mut input: &str) -> Result<ures, Error> {
     let mut sum = 0;
-    while input.len() > 0 {
+    while !input.is_empty() {
         let end = input.find("don't()").unwrap_or(input.len());
         sum += part1(&input[..end])?;
         let end = end + 7;

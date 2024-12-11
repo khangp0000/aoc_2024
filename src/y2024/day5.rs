@@ -7,6 +7,8 @@ use std::str::FromStr;
 
 part_solver!();
 
+type ChildrenRelationShip = HashMap<usize, BitSet<usize>>;
+
 pub fn part1(input: &str) -> Result<ures, Error> {
     let (relationship, all_lists) = parse_input(input)?;
     let res = all_lists
@@ -46,7 +48,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
 fn fix_reverse(
     val: usize,
     original_list_bit_set: &BitSet<usize>,
-    relationship: &HashMap<usize, BitSet<usize>>,
+    relationship: &ChildrenRelationShip,
     visited: &mut BitSet<usize>,
     res: &mut Vec<usize>,
 ) {
@@ -61,7 +63,7 @@ fn fix_reverse(
     }
 }
 
-fn is_valid(list: &Vec<usize>, relationship: &HashMap<usize, BitSet<usize>>) -> bool {
+fn is_valid(list: &Vec<usize>, relationship: &ChildrenRelationShip) -> bool {
     let mut parents = BitSet::<usize>::default();
     for child in list {
         if let Some(children) = relationship.get(child) {
@@ -75,14 +77,14 @@ fn is_valid(list: &Vec<usize>, relationship: &HashMap<usize, BitSet<usize>>) -> 
     true
 }
 
-fn parse_input(input: &str) -> Result<(HashMap<usize, BitSet<usize>>, Vec<Vec<usize>>), Error> {
+fn parse_input(input: &str) -> Result<(ChildrenRelationShip, Vec<Vec<usize>>), Error> {
     let (left, right) = input.split_once("\n\n").ok_or_else(|| {
         Error::ParseError("Failed to parse day 5 input: no empty line delimiter".to_string())
     })?;
     Ok((parse_relationship(left)?, parse_list(right)?))
 }
 
-fn parse_relationship(input: &str) -> Result<HashMap<usize, BitSet<usize>>, Error> {
+fn parse_relationship(input: &str) -> Result<ChildrenRelationShip, Error> {
     input.lines().map(parse_relationship_line).try_fold(
         HashMap::<usize, BitSet<usize>>::new(),
         |mut map, parent_child| {

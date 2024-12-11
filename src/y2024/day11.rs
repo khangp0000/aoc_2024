@@ -19,7 +19,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
         .try_fold(0, |sum, res| res.map(|v| v + sum))
 }
 
-fn parse_input<'a>(input: &'a str) -> impl Iterator<Item = Result<u64, Error>> + use<'a> {
+fn parse_input(input: &str) -> impl Iterator<Item = Result<u64, Error>> + use<'_> {
     input.split(" ").map(|s| {
         u64::from_str(s).map_err(|e| {
             Error::ParseError(format!("Failed to parse unsigned integer: {:?}: {}", s, e))

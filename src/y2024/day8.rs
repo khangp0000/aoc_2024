@@ -25,10 +25,7 @@ pub fn part1(input: &str) -> Result<ures, Error> {
         },
     );
 
-    antinode_set
-        .len()
-        .try_into()
-        .map_err(|e| Error::InvalidState(format!("cannot return correct result type: {}", e)))
+    Ok(antinode_set.len() as ures)
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
@@ -50,10 +47,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
         },
     );
 
-    antinode_set
-        .len()
-        .try_into()
-        .map_err(|e| Error::InvalidState(format!("cannot return correct result type: {}", e)))
+    Ok(antinode_set.len() as ures)
 }
 
 #[inline]
@@ -94,18 +88,18 @@ fn forward_antinode(node1: [usize; 2], node2: [usize; 2]) -> Option<[usize; 2]> 
 }
 
 #[inline]
-fn forward_antinode_iter<'a, T>(
+fn forward_antinode_iter<T>(
     node1: [usize; 2],
     node2: [usize; 2],
-    board: &'a Board2d<T>,
-) -> impl Iterator<Item = [usize; 2]> + use<'a, T> {
+    board: &Board2d<T>,
+) -> impl Iterator<Item = [usize; 2]> + use<'_, T> {
     struct InternalIter<'b, U> {
         current: [usize; 2],
         next: [usize; 2],
         board: &'b Board2d<U>,
     }
 
-    impl<'b, U> Iterator for InternalIter<'b, U> {
+    impl<U> Iterator for InternalIter<'_, U> {
         type Item = [usize; 2];
 
         fn next(&mut self) -> Option<Self::Item> {

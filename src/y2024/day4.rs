@@ -71,7 +71,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
 
 // This is full retarded solution..., have function for every type of match :X
 
-fn match_horizontal(x: usize, y: usize, width: usize, board: &Vec<&str>, s: &str) -> bool {
+fn match_horizontal(x: usize, y: usize, width: usize, board: &[&str], s: &str) -> bool {
     let len = s.len();
     if x + len <= width {
         let mut i = 0;
@@ -86,7 +86,7 @@ fn match_horizontal(x: usize, y: usize, width: usize, board: &Vec<&str>, s: &str
     false
 }
 
-fn match_vertical(x: usize, y: usize, board: &Vec<&str>, s: &str) -> bool {
+fn match_vertical(x: usize, y: usize, board: &[&str], s: &str) -> bool {
     let len = s.len();
     if y + len <= board.len() {
         let mut i = 0;
@@ -101,7 +101,7 @@ fn match_vertical(x: usize, y: usize, board: &Vec<&str>, s: &str) -> bool {
     false
 }
 
-fn match_diagonal_down_right(x: usize, y: usize, width: usize, board: &Vec<&str>, s: &str) -> bool {
+fn match_diagonal_down_right(x: usize, y: usize, width: usize, board: &[&str], s: &str) -> bool {
     let len = s.len();
     if x + len <= width && y + len <= board.len() {
         let mut i = 0;
@@ -120,7 +120,7 @@ fn match_diagonal_up_right_from_bottom_left(
     x: usize,
     y: usize,
     width: usize,
-    board: &Vec<&str>,
+    board: &[&str],
     s: &str,
 ) -> bool {
     let len = s.len();

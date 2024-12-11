@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Clone)]
+#[allow(clippy::enum_variant_names)]
 pub enum Error {
     #[error(transparent)]
     UtilsError(#[from] crate::utils::UtilsError),

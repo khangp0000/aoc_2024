@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::part_solver;
 use crate::utils::ures;
-use std::cmp::{min, Reverse};
+use std::cmp::{min, Ordering, Reverse};
 use std::collections::BinaryHeap;
 
 part_solver!();
@@ -69,13 +69,11 @@ fn process_disk_part_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize, 
         |(mut pos, mut loc_map, mut free_space_size_map), (idx, size)| {
             if (idx % 2) == 0 {
                 loc_map.push((pos, size));
-            } else {
-                if size > 0 {
-                    let free_space_size_idx = size as usize - 1;
-                    free_space_size_map[free_space_size_idx]
-                        .get_or_insert_with(BinaryHeap::new)
-                        .push(Reverse(pos));
-                }
+            } else if size > 0 {
+                let free_space_size_idx = size as usize - 1;
+                free_space_size_map[free_space_size_idx]
+                    .get_or_insert_with(BinaryHeap::new)
+                    .push(Reverse(pos));
             };
             pos += size as usize;
             (pos, loc_map, free_space_size_map)
@@ -94,7 +92,7 @@ fn process_disk_part_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize, 
 fn disk_realloc_part_2(
     pos: usize,
     size: u8,
-    free_space_size_map: &mut Vec<Option<BinaryHeap<Reverse<usize>>>>,
+    free_space_size_map: &mut [Option<BinaryHeap<Reverse<usize>>>],
 ) -> Option<usize> {
     if size == 0 {
         None
@@ -142,10 +140,10 @@ impl<'a> CompactDataIter<'a> {
         let current_idx = 0;
         let rev_idx = disk.len() & (usize::MAX - 1);
         let current_val = 0;
-        let current_val_count = disk.get(0).cloned().unwrap_or(0);
+        let current_val_count = disk.first().cloned().unwrap_or(0);
         let rev_left_over_count = disk.get(rev_idx).cloned().unwrap_or(0);
         CompactDataIter {
-            disk: disk,
+            disk,
             current_idx,
             rev_idx,
             current_val,
@@ -155,7 +153,7 @@ impl<'a> CompactDataIter<'a> {
     }
 }
 
-impl<'a> Iterator for CompactDataIter<'a> {
+impl Iterator for CompactDataIter<'_> {
     type Item = (usize, u8);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -164,19 +162,23 @@ impl<'a> Iterator for CompactDataIter<'a> {
         }
         while self.current_val_count == 0 {
             self.current_idx += 1;
-            if self.current_idx > self.rev_idx {
-                return None;
-            } else if self.current_idx == self.rev_idx {
-                self.current_val = self.rev_idx / 2;
-                self.current_val_count = self.rev_left_over_count;
-                self.rev_left_over_count = 0;
-            } else {
-                if (self.current_idx % 2) == 1 {
-                    self.current_val = self.rev_idx / 2;
-                } else {
-                    self.current_val = self.current_idx / 2;
+            match self.current_idx.cmp(&self.rev_idx) {
+                Ordering::Less => {
+                    if (self.current_idx % 2) == 1 {
+                        self.current_val = self.rev_idx / 2;
+                    } else {
+                        self.current_val = self.current_idx / 2;
+                    }
+                    self.current_val_count = self.disk[self.current_idx];
                 }
-                self.current_val_count = self.disk[self.current_idx];
+                Ordering::Equal => {
+                    self.current_val = self.rev_idx / 2;
+                    self.current_val_count = self.rev_left_over_count;
+                    self.rev_left_over_count = 0;
+                }
+                Ordering::Greater => {
+                    return None;
+                }
             }
         }
         if (self.current_idx % 2) == 1 {

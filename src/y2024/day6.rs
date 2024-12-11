@@ -158,7 +158,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
     let mut sum = 0;
     let mut prev = guard;
     loop {
-        guard = prev.clone();
+        guard = prev;
         let status = guard.step(&mut board);
         if status != Status::OkRepeat && status != Status::OkFirst {
             break;
@@ -198,12 +198,10 @@ fn parse_input(input: &str) -> Result<(Board2d<u8>, Guard), Error> {
                 (Vec::with_capacity(len), None),
                 |(mut vec, mut x), (index, b)| {
                     let b = b?;
-                    if b != Mask::Wall as u8 && b != Mask::Empty as u8 {
-                        if x.replace(index).is_some() {
-                            return Err(Error::ParseError(
-                                "more than 1 starting position".to_string(),
-                            ));
-                        }
+                    if b != Mask::Wall as u8 && b != Mask::Empty as u8 && x.replace(index).is_some() {
+                        return Err(Error::ParseError(
+                            "more than 1 starting position".to_string(),
+                        ));
                     }
                     vec.push(b);
                     Ok((vec, x))

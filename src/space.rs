@@ -55,7 +55,7 @@ impl<T> Space<T, usize, 2> for Board2d<T> {
     }
 }
 
-impl<'a, T> Space<T, usize, 2> for RefBoard2d<'a, T>
+impl<T> Space<T, usize, 2> for RefBoard2d<'_, T>
 where
     [T]: ToOwned<Owned = Vec<T>>,
 {
@@ -87,7 +87,7 @@ impl<T> IterSpace<T, usize, 2> for Board2d<T> {
     }
 }
 
-impl<'a, T> IterSpace<T, usize, 2> for RefBoard2d<'a, T>
+impl<T> IterSpace<T, usize, 2> for RefBoard2d<'_, T>
 where
     [T]: ToOwned<Owned = Vec<T>>,
 {
@@ -108,7 +108,7 @@ impl<T> IterMutSpace<T, usize, 2> for Board2d<T> {
     }
 }
 
-impl<'a, T> IterMutSpace<T, usize, 2> for RefBoard2d<'a, T>
+impl<T> IterMutSpace<T, usize, 2> for RefBoard2d<'_, T>
 where
     [T]: ToOwned<Owned = Vec<T>>,
 {
@@ -144,7 +144,7 @@ impl<T> AsRef<Vec<Vec<T>>> for Board2d<T> {
 }
 
 #[allow(dead_code)]
-impl<'a, T> RefBoard2d<'a, T>
+impl<T> RefBoard2d<'_, T>
 where
     [T]: ToOwned<Owned = Vec<T>>,
 {
@@ -191,9 +191,9 @@ impl<B: BitBlock> Space<bool, usize, 2> for BitBoard2d<B> {
 
     fn set(&mut self, idx: &[usize; 2], val: bool) -> Option<bool> {
         let [x, y] = idx;
-        self.inner.get_mut(*y).and_then(|v| match val {
-            true => Some(!v.insert(*x)),
-            false => Some(v.remove(*x)),
+        self.inner.get_mut(*y).map(|v| match val {
+            true => !v.insert(*x),
+            false => v.remove(*x),
         })
     }
 
@@ -209,9 +209,9 @@ impl<B: BitBlock> BitBoard2d<B> {
         if *y >= self.inner.len() {
             self.inner.resize_with(y.checked_add(1)?, BitSet::default);
         }
-        self.inner.get_mut(*y).and_then(|v| match val {
-            true => Some(!v.insert(*x)),
-            false => Some(v.remove(*x)),
+        self.inner.get_mut(*y).map(|v| match val {
+            true => !v.insert(*x),
+            false => v.remove(*x),
         })
     }
 }

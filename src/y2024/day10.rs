@@ -53,7 +53,7 @@ fn find_path_count(
     pos: &[usize; 2],
     val: u8,
 ) -> ures {
-    match visited_set.get(&pos) {
+    match visited_set.get(pos) {
         None => return 0,
         Some(visited) => {
             if *visited {
@@ -62,7 +62,7 @@ fn find_path_count(
         }
     }
 
-    visited_set.set(&pos, true);
+    visited_set.set(pos, true);
 
     if val == b'9' {
         return 1;
@@ -71,37 +71,41 @@ fn find_path_count(
     let [x, y] = *pos;
     let mut sum = 0;
     let valid_next_val = val + 1;
-    x.checked_sub(1)
+    if let Some(count) = x.checked_sub(1)
         .and_then(|x| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val))
-        .map(|count| sum += count);
+        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val)) {
+        sum += count;
+    }
 
-    board
+    if let Some(count) = board
         .get(&[x + 1, y])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count(board, visited_set, &[x + 1, y], *val))
-        .map(|count| sum += count);
+        .map(|val| find_path_count(board, visited_set, &[x + 1, y], *val)) {
+        sum += count
+    }
 
-    y.checked_sub(1)
+    if let Some(count) = y.checked_sub(1)
         .and_then(|y| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val))
-        .map(|count| sum += count);
+        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val)) {
+        sum += count;
+    }
 
-    board
+    if let Some(count) = board
         .get(&[x, y + 1])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count(board, visited_set, &[x, y + 1], *val))
-        .map(|count| sum += count);
+        .map(|val| find_path_count(board, visited_set, &[x, y + 1], *val)) {
+        sum += count;
+    }
 
     sum
 }
@@ -112,7 +116,7 @@ fn find_path_count_2(
     pos: &[usize; 2],
     val: u8,
 ) -> ures {
-    match cache.get(&pos) {
+    match cache.get(pos) {
         None => return 0,
         Some(cache_val) => {
             if let &Some(count) = cache_val {
@@ -128,37 +132,41 @@ fn find_path_count_2(
     let [x, y] = *pos;
     let mut sum = 0;
     let valid_next_val = val + 1;
-    x.checked_sub(1)
+    if let Some(count) = x.checked_sub(1)
         .and_then(|x| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val))
-        .map(|count| sum += count);
+        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val)) {
+        sum += count;
+    }
 
-    board
+    if let Some(count) = board
         .get(&[x + 1, y])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count_2(board, cache, &[x + 1, y], *val))
-        .map(|count| sum += count);
+        .map(|val| find_path_count_2(board, cache, &[x + 1, y], *val)) {
+        sum += count;
+    }
 
-    y.checked_sub(1)
+    if let Some(count) = y.checked_sub(1)
         .and_then(|y| {
             board
                 .get(&[x, y])
                 .filter(|next_val| **next_val == valid_next_val)
                 .map(|val| ([x, y], val))
         })
-        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val))
-        .map(|count| sum += count);
+        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val)) {
+        sum += count;
+    }
 
-    board
+    if let Some(count) = board
         .get(&[x, y + 1])
         .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count_2(board, cache, &[x, y + 1], *val))
-        .map(|count| sum += count);
+        .map(|val| find_path_count_2(board, cache, &[x, y + 1], *val)) {
+        sum += count;
+    }
 
     cache.set(pos, Some(sum));
 
