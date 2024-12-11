@@ -1,22 +1,21 @@
 use crate::error::Error;
 use crate::part_solver;
 use crate::utils::ures;
-use std::collections::HashMap;
 use std::str::FromStr;
 
 part_solver!();
 
 pub fn part1(input: &str) -> Result<ures, Error> {
-    let mut cache = HashMap::new();
+    let mut cache = vec![[None; 25]; 100];
     parse_input(input.trim())
-        .map(|v| v.and_then(|v| blink_count(v, 25, &mut cache)))
+        .map(|v| v.and_then(|v| blink_count_with_cache(v, 25, &mut cache)))
         .try_fold(0, |sum, res| res.map(|v| v + sum))
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
-    let mut cache = HashMap::new();
+    let mut cache = vec![[None; 75]; 1000];
     parse_input(input.trim())
-        .map(|v| v.and_then(|v| blink_count(v, 75, &mut cache)))
+        .map(|v| v.and_then(|v| blink_count_with_cache(v, 75, &mut cache)))
         .try_fold(0, |sum, res| res.map(|v| v + sum))
 }
 
@@ -46,26 +45,32 @@ fn blink(val: u64) -> Result<Vec<u64>, Error> {
     Ok(res)
 }
 
-fn blink_count(
+fn blink_count_with_cache<const N: usize>(
     val: u64,
     target_count: u8,
-    cache: &mut HashMap<(u64, u8), ures>,
+    cache: &mut Vec<[Option<ures>; N]>,
 ) -> Result<ures, Error> {
     if target_count == 0 {
         Ok(1)
     } else {
         if val < 10000 {
-            if let Some(count) = cache.get(&(val, target_count)) {
+            if let Some(Some(count)) = cache
+                .get(val as usize)
+                .and_then(|v| v.get(target_count as usize))
+            {
                 return Ok(*count);
             }
         }
         let mut sum = 0;
         for val in blink(val)?.into_iter() {
-            sum += blink_count(val, target_count - 1, cache)?;
+            sum += blink_count_with_cache(val, target_count - 1, cache)?;
         }
-        if val < 10000 {
-            cache.insert((val, target_count), sum);
-        }
+
+        cache.get_mut(val as usize).and_then(|inner_array| {
+            inner_array
+                .get_mut(target_count as usize)
+                .map(|count| count.replace(sum))
+        });
         Ok(sum)
     }
 }
