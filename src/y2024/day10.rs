@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::part_solver;
 use crate::space::{BitBoard2d, Board2d, IterSpace, RefBoard2d, Space};
-use crate::utils::ures;
+use crate::utils::{cardinal, ures};
 use std::borrow::Cow;
 
 part_solver!();
@@ -27,8 +27,20 @@ pub fn part1(input: &str) -> Result<ures, Error> {
 pub fn part2(input: &str) -> Result<ures, Error> {
     let board = parse_input(input);
     let mut cache: Board2d<Option<ures>> = (0..board.height())
-        .map(|row| vec![None; board.width(row).unwrap()])
-        .collect::<Vec<_>>()
+        .map(|row| {
+            board
+                .width(row)
+                .ok_or_else(|| {
+                    Error::InvalidState("board width should be valid for row 0 to height".into())
+                })
+                .map(|len| vec![None; len])
+        })
+        .try_fold(Vec::with_capacity(board.height()), |mut vec, val| {
+            val.map(|v| {
+                vec.push(v);
+                vec
+            })
+        })?
         .into();
     let res = board
         .iter()
@@ -68,52 +80,16 @@ fn find_path_count(
         return 1;
     }
 
-    let [x, y] = *pos;
-    let mut sum = 0;
     let valid_next_val = val + 1;
-    if let Some(count) = x
-        .checked_sub(1)
-        .and_then(|x| {
+
+    cardinal(pos)
+        .filter_map(|pos| {
             board
-                .get(&[x, y])
+                .get(&pos)
                 .filter(|next_val| **next_val == valid_next_val)
-                .map(|val| ([x, y], val))
+                .map(|val| find_path_count(board, visited_set, &pos, *val))
         })
-        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val))
-    {
-        sum += count;
-    }
-
-    if let Some(count) = board
-        .get(&[x + 1, y])
-        .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count(board, visited_set, &[x + 1, y], *val))
-    {
-        sum += count
-    }
-
-    if let Some(count) = y
-        .checked_sub(1)
-        .and_then(|y| {
-            board
-                .get(&[x, y])
-                .filter(|next_val| **next_val == valid_next_val)
-                .map(|val| ([x, y], val))
-        })
-        .map(|(pos, val)| find_path_count(board, visited_set, &pos, *val))
-    {
-        sum += count;
-    }
-
-    if let Some(count) = board
-        .get(&[x, y + 1])
-        .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count(board, visited_set, &[x, y + 1], *val))
-    {
-        sum += count;
-    }
-
-    sum
+        .sum::<ures>()
 }
 
 fn find_path_count_2(
@@ -135,54 +111,15 @@ fn find_path_count_2(
         return 1;
     }
 
-    let [x, y] = *pos;
-    let mut sum = 0;
     let valid_next_val = val + 1;
-    if let Some(count) = x
-        .checked_sub(1)
-        .and_then(|x| {
+    cardinal(pos)
+        .filter_map(|pos| {
             board
-                .get(&[x, y])
+                .get(&pos)
                 .filter(|next_val| **next_val == valid_next_val)
-                .map(|val| ([x, y], val))
+                .map(|val| find_path_count_2(board, cache, &pos, *val))
         })
-        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val))
-    {
-        sum += count;
-    }
-
-    if let Some(count) = board
-        .get(&[x + 1, y])
-        .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count_2(board, cache, &[x + 1, y], *val))
-    {
-        sum += count;
-    }
-
-    if let Some(count) = y
-        .checked_sub(1)
-        .and_then(|y| {
-            board
-                .get(&[x, y])
-                .filter(|next_val| **next_val == valid_next_val)
-                .map(|val| ([x, y], val))
-        })
-        .map(|(next_pos, val)| find_path_count_2(board, cache, &next_pos, *val))
-    {
-        sum += count;
-    }
-
-    if let Some(count) = board
-        .get(&[x, y + 1])
-        .filter(|next_val| **next_val == valid_next_val)
-        .map(|val| find_path_count_2(board, cache, &[x, y + 1], *val))
-    {
-        sum += count;
-    }
-
-    cache.set(pos, Some(sum));
-
-    sum
+        .sum::<ures>()
 }
 
 #[cfg(test)]

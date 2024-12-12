@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::space::Pos;
 use crate::y2024;
 use chrono::{Datelike, Utc};
 use chrono_tz::US::Eastern;
@@ -307,6 +308,14 @@ pub fn check_valid_question(year: u16, day: Option<u8>) -> Result<RangeInclusive
     } else {
         Ok(1..=now_eastern.day() as u8)
     }
+}
+
+pub fn cardinal(pos: &[usize; 2]) -> impl Iterator<Item = [usize; 2]> + use<'_> {
+    static DIRECTION: &[[isize; 2]; 4] = &[[-1, 0], [0, -1], [1, 0], [0, 1]];
+
+    DIRECTION
+        .iter()
+        .filter_map(|direction| pos.shift(direction))
 }
 
 #[cfg(test)]

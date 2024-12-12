@@ -155,6 +155,20 @@ where
     pub fn width(&self, row: usize) -> Option<usize> {
         self.inner.get(row).map(|s| s.len())
     }
+
+    pub fn map_ref<U, F: Fn([usize; 2], &T) -> U>(&self, f: F) -> Board2d<U> {
+        self.inner
+            .iter()
+            .enumerate()
+            .map(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .map(|(x, val)| f([x, y], val))
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+            .into()
+    }
 }
 
 #[allow(dead_code)]
@@ -213,5 +227,29 @@ impl<B: BitBlock> BitBoard2d<B> {
             true => !v.insert(*x),
             false => v.remove(*x),
         })
+    }
+}
+
+pub trait Pos<const N: usize> {
+    fn shift(&self, idx: &[isize; N]) -> Option<[usize; N]>;
+    fn shift_dimension(&self, idx: usize, diff: isize) -> Option<[usize; N]>;
+}
+
+impl<const N: usize> Pos<N> for [usize; N] {
+    #[inline]
+    fn shift(&self, diff: &[isize; N]) -> Option<[usize; N]> {
+        self.iter()
+            .enumerate()
+            .try_fold(Vec::with_capacity(N), |mut v, (idx, val)| {
+                v.push(val.checked_add_signed(diff[idx])?);
+                Some(v)
+            })
+            .map(|v| v.try_into().unwrap())
+    }
+
+    fn shift_dimension(&self, idx: usize, diff: isize) -> Option<[usize; N]> {
+        let mut res = *self;
+        res[idx] = res[idx].checked_add_signed(diff)?;
+        Some(res)
     }
 }

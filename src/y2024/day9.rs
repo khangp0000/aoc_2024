@@ -26,7 +26,7 @@ pub fn part1(input: &str) -> Result<ures, Error> {
 
 pub fn part2(input: &str) -> Result<ures, Error> {
     let data: Vec<u8> = parse_input(input)?;
-    Ok(process_disk_part_2(data.into_iter())
+    Ok(process_disk_part_2(data.into_iter())?
         .into_iter()
         .enumerate()
         .skip(1) // skipping zero value
@@ -61,7 +61,9 @@ fn parse_input(input: &str) -> Result<Vec<u8>, Error> {
         })
 }
 
-fn process_disk_part_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize, u8)> {
+fn process_disk_part_2<T: ExactSizeIterator<Item = u8>>(
+    disk: T,
+) -> Result<Vec<(usize, u8)>, Error> {
     let len = disk.len();
     let (_, mut loc_map, mut free_space_size_map) = disk.enumerate().fold(
         (0, Vec::with_capacity(len), vec![None; 9]),
@@ -79,22 +81,23 @@ fn process_disk_part_2<T: ExactSizeIterator<Item = u8>>(disk: T) -> Vec<(usize, 
         },
     );
 
-    loc_map.iter_mut().rev().for_each(|(pos, size)| {
-        if let Some(new_pos) = disk_realloc_part_2(*pos, *size, &mut free_space_size_map) {
+    loc_map.iter_mut().rev().try_for_each(|(pos, size)| {
+        if let Some(new_pos) = disk_realloc_part_2(*pos, *size, &mut free_space_size_map)? {
             *pos = new_pos
         }
-    });
+        Ok::<_, Error>(())
+    })?;
 
-    loc_map
+    Ok(loc_map)
 }
 
 fn disk_realloc_part_2(
     pos: usize,
     size: u8,
     free_space_size_map: &mut [Option<BinaryHeap<Reverse<usize>>>],
-) -> Option<usize> {
+) -> Result<Option<usize>, Error> {
     if size == 0 {
-        None
+        Ok(None)
     } else {
         let min_free_pos_and_idx = free_space_size_map[size as usize - 1..]
             .iter()
@@ -110,17 +113,25 @@ fn disk_realloc_part_2(
         if let Some((new_pos, new_free_size)) = min_free_pos_and_idx {
             free_space_size_map[size as usize + new_free_size - 1]
                 .as_mut()
-                .unwrap()
+                .ok_or_else(|| {
+                    Error::InvalidState(
+                        "free space size map at found free size should not be none".into(),
+                    )
+                })?
                 .pop()
-                .unwrap();
+                .ok_or_else(|| {
+                    Error::InvalidState(
+                        "free space size map at found free size should not be empty".into(),
+                    )
+                })?;
             if new_free_size > 0 {
                 free_space_size_map[new_free_size - 1]
                     .get_or_insert_default()
                     .push(Reverse(new_pos + size as usize));
             }
-            Some(new_pos)
+            Ok(Some(new_pos))
         } else {
-            None
+            Ok(None)
         }
     }
 }

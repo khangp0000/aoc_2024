@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::part_solver;
-use crate::space::{Board2d, Space};
+use crate::space::{Board2d, Pos, Space};
 use crate::utils::ures;
 use std::cmp::PartialEq;
 
@@ -77,57 +77,37 @@ struct Guard {
 }
 
 impl Guard {
-    fn step(&mut self, board: &mut Board2d<u8>) -> Status {
-        let orig_x = self.coord[0];
-        let orig_y = self.coord[1];
-        match self.facing {
-            Direction::Up => {
-                self.coord[1] = orig_y.wrapping_sub(1);
-            }
-            Direction::Right => {
-                self.coord[0] += 1;
-            }
-            Direction::Down => {
-                self.coord[1] += 1;
-            }
-            Direction::Left => {
-                self.coord[0] = orig_x.wrapping_sub(1);
-            }
+    fn step(&mut self, board: &mut Board2d<u8>) -> Result<Status, Error> {
+        let orig = self.coord;
+        let pos_mask = match self.facing {
+            Direction::Up => self.coord.shift(&[0, -1]),
+            Direction::Right => self.coord.shift(&[1, 0]),
+            Direction::Down => self.coord.shift(&[0, 1]),
+            Direction::Left => self.coord.shift(&[-1, 0]),
         }
+        .inspect(|coord| self.coord = *coord)
+        .and_then(|next_coord| board.get(&next_coord));
 
-        let pos_mask = board.get(&self.coord);
         match pos_mask {
-            None => Status::Done,
+            None => Ok(Status::Done),
             Some(&pos_mask) => {
                 if pos_mask == Mask::Wall as u8 {
-                    match self.facing {
-                        Direction::Up => {
-                            self.coord[1] = orig_y;
-                        }
-                        Direction::Right => {
-                            self.coord[0] = orig_x;
-                        }
-                        Direction::Down => {
-                            self.coord[1] = orig_y;
-                        }
-                        Direction::Left => {
-                            self.coord[0] = orig_x;
-                        }
-                    }
-
+                    self.coord = orig;
                     self.facing.rotate_self();
                 }
 
-                let val = board.get_mut(&self.coord).unwrap();
+                let val = board.get_mut(&self.coord).ok_or_else(|| {
+                    Error::InvalidState("guard position got outside the board".into())
+                })?;
                 let mask = self.facing.mask() as u8;
                 if (*val & mask) != 0 {
-                    Status::Cycle
+                    Ok(Status::Cycle)
                 } else {
                     *val |= mask;
                     if *val == mask {
-                        Status::OkFirst
+                        Ok(Status::OkFirst)
                     } else {
-                        Status::OkRepeat
+                        Ok(Status::OkRepeat)
                     }
                 }
             }
@@ -138,7 +118,7 @@ impl Guard {
 pub fn part1(input: &str) -> Result<ures, Error> {
     let (mut board, mut guard) = parse_input(input)?;
     loop {
-        let status = guard.step(&mut board);
+        let status = guard.step(&mut board)?;
         if status != Status::OkRepeat && status != Status::OkFirst {
             break;
         }
@@ -159,14 +139,17 @@ pub fn part2(input: &str) -> Result<ures, Error> {
     let mut prev = guard;
     loop {
         guard = prev;
-        let status = guard.step(&mut board);
+        let status = guard.step(&mut board)?;
         if status != Status::OkRepeat && status != Status::OkFirst {
             break;
         }
         if status == Status::OkFirst {
             let mut board = board.clone();
-            *board.get_mut(&guard.coord).unwrap() = Mask::Wall as u8;
-            if has_loop(&mut prev, &mut board) {
+            let val = board.get_mut(&guard.coord).ok_or_else(|| {
+                Error::InvalidState("guard position got outside the board".into())
+            })?;
+            *val = Mask::Wall as u8;
+            if has_loop(&mut prev, &mut board)? {
                 sum += 1;
             }
         }
@@ -176,14 +159,14 @@ pub fn part2(input: &str) -> Result<ures, Error> {
     Ok(sum)
 }
 
-fn has_loop(guard: &mut Guard, board: &mut Board2d<u8>) -> bool {
+fn has_loop(guard: &mut Guard, board: &mut Board2d<u8>) -> Result<bool, Error> {
     loop {
-        let status = guard.step(board);
+        let status = guard.step(board)?;
         match status {
             Status::OkFirst => {}
             Status::OkRepeat => {}
-            Status::Cycle => return true,
-            Status::Done => return false,
+            Status::Cycle => return Ok(true),
+            Status::Done => return Ok(false),
         }
     }
 }
