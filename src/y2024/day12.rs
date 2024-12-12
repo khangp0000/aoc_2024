@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::part_solver;
-use crate::space::{BitBoard2d, Board2d, IterSpace, Pos, RefBoard2d, Space};
+use crate::space::{BitBoard2d, IterSpace, Pos, RefBoard2d, Space};
 use crate::utils::{cardinal, ures};
 use std::borrow::Cow;
 
@@ -8,20 +8,6 @@ part_solver!();
 
 type Area = ures;
 type Circumference = ures;
-
-#[derive(Copy, Clone)]
-enum Wall {
-    Left = 1,
-    Top = 2,
-    Right = 4,
-    Bottom = 8,
-}
-
-impl Wall {
-    fn has_wall(&self, val: u8) -> bool {
-        (*self as u8 & val) != 0
-    }
-}
 
 pub fn part1(input: &str) -> Result<ures, Error> {
     let board = parse_input(input);
@@ -37,10 +23,9 @@ pub fn part1(input: &str) -> Result<ures, Error> {
 pub fn part2(input: &str) -> Result<ures, Error> {
     let board = parse_input(input);
     let visited_set = &mut BitBoard2d::<usize>::with_height(board.height());
-    let wall_board = board.map_ref(|pos, val| place_wall(&board, &pos, val));
     let mut cost = 0;
     for (pos, val) in board.iter() {
-        let (area, side) = area_side(&board, &wall_board, visited_set, &pos, val)?;
+        let (area, side) = area_side(&board, visited_set, &pos, val)?;
         cost += area * side;
     }
     Ok(cost)
@@ -54,87 +39,47 @@ fn parse_input(input: &str) -> RefBoard2d<u8> {
         .into()
 }
 
-fn place_wall(board: &RefBoard2d<u8>, pos: &[usize; 2], val: &u8) -> u8 {
-    let mut output = 0;
-    if Some(val) != pos.shift_dimension(0, -1).and_then(|pos| board.get(&pos)) {
-        output |= Wall::Left as u8;
-    }
-    if Some(val) != pos.shift_dimension(1, -1).and_then(|pos| board.get(&pos)) {
-        output |= Wall::Top as u8;
-    }
-    if Some(val) != pos.shift_dimension(0, 1).and_then(|pos| board.get(&pos)) {
-        output |= Wall::Right as u8;
-    }
-    if Some(val) != pos.shift_dimension(1, 1).and_then(|pos| board.get(&pos)) {
-        output |= Wall::Bottom as u8;
-    }
-    output
-}
-
-fn count_corner(wall_board: &Board2d<u8>, pos: &[usize; 2]) -> Result<ures, Error> {
-    let val = wall_board
+fn count_corner(board: &RefBoard2d<u8>, pos: &[usize; 2]) -> Result<ures, Error> {
+    let val = board
         .get(pos)
-        .ok_or_else(|| Error::InvalidState("wall board out of bound".into()))?;
-    let has_top = Wall::Top.has_wall(*val);
-    let has_right = Wall::Right.has_wall(*val);
-    let has_bottom = Wall::Bottom.has_wall(*val);
-    let has_left = Wall::Left.has_wall(*val);
+        .ok_or_else(|| Error::InvalidState("board out of bound".into()))?;
+    let same_top = shift_equal(board, pos, &[0, -1], val);
+    let same_right = shift_equal(board, pos, &[1, 0], val);
+    let same_bottom = shift_equal(board, pos, &[0, 1], val);
+    let same_left = shift_equal(board, pos, &[-1, 0], val);
 
     let mut corner_count = 0;
 
-    if (has_top && has_left)
-        || (!has_top && !has_left && {
-            let val = pos
-                .shift(&[-1, -1])
-                .and_then(|p| wall_board.get(&p))
-                .cloned()
-                .unwrap_or(15);
-            Wall::Right.has_wall(val) && Wall::Bottom.has_wall(val)
-        })
+    if (!same_top && !same_left)
+        || (same_top && same_left && !shift_equal(board, pos, &[-1, -1], val))
     {
         corner_count += 1;
     }
 
-    if (has_top && has_right)
-        || (!has_top && !has_right && {
-            let val = pos
-                .shift(&[1, -1])
-                .and_then(|p| wall_board.get(&p))
-                .cloned()
-                .unwrap_or(15);
-            Wall::Left.has_wall(val) && Wall::Bottom.has_wall(val)
-        })
+    if (!same_top && !same_right)
+        || (same_top && same_right && !shift_equal(board, pos, &[1, -1], val))
     {
         corner_count += 1;
     }
 
-    if (has_bottom && has_left)
-        || (!has_bottom && !has_left && {
-            let val = pos
-                .shift(&[-1, 1])
-                .and_then(|p| wall_board.get(&p))
-                .cloned()
-                .unwrap_or(15);
-            Wall::Right.has_wall(val) && Wall::Top.has_wall(val)
-        })
+    if (!same_bottom && !same_left)
+        || (same_bottom && same_left && !shift_equal(board, pos, &[-1, 1], val))
     {
         corner_count += 1;
     }
 
-    if (has_bottom && has_right)
-        || (!has_bottom && !has_right && {
-            let val = pos
-                .shift(&[1, 1])
-                .and_then(|p| wall_board.get(&p))
-                .cloned()
-                .unwrap_or(15);
-            Wall::Left.has_wall(val) && Wall::Top.has_wall(val)
-        })
+    if (!same_bottom && !same_right)
+        || (same_bottom && same_right && !shift_equal(board, pos, &[1, 1], val))
     {
         corner_count += 1;
     }
 
     Ok(corner_count)
+}
+
+#[inline]
+fn shift_equal(board: &RefBoard2d<u8>, pos: &[usize; 2], diff: &[isize; 2], val: &u8) -> bool {
+    pos.shift(diff).and_then(|pos| board.get(&pos)) == Some(val)
 }
 
 fn area_circumference(
@@ -165,7 +110,6 @@ fn area_circumference(
 
 fn area_side(
     board: &RefBoard2d<u8>,
-    wall_board: &Board2d<u8>,
     visited_set: &mut BitBoard2d,
     pos: &[usize; 2],
     val: &u8,
@@ -181,9 +125,9 @@ fn area_side(
                 board
                     .get(&next_pos)
                     .filter(|next_val| *next_val == val)
-                    .map(|next_val| area_side(board, wall_board, visited_set, &next_pos, next_val))
+                    .map(|next_val| area_side(board, visited_set, &next_pos, next_val))
             })
-            .try_fold((1, count_corner(wall_board, pos)?), |(area, side), res| {
+            .try_fold((1, count_corner(board, pos)?), |(area, side), res| {
                 let (next_area, next_side) = res?;
                 Ok((area + next_area, side + next_side))
             })

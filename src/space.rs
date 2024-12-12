@@ -230,6 +230,7 @@ impl<B: BitBlock> BitBoard2d<B> {
     }
 }
 
+#[allow(dead_code)]
 pub trait Pos<const N: usize> {
     fn shift(&self, idx: &[isize; N]) -> Option<[usize; N]>;
     fn shift_dimension(&self, idx: usize, diff: isize) -> Option<[usize; N]>;
@@ -247,6 +248,7 @@ impl<const N: usize> Pos<N> for [usize; N] {
             .map(|v| v.try_into().unwrap())
     }
 
+    #[inline]
     fn shift_dimension(&self, idx: usize, diff: isize) -> Option<[usize; N]> {
         let mut res = *self;
         res[idx] = res[idx].checked_add_signed(diff)?;
