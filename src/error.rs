@@ -1,3 +1,4 @@
+use nom_supreme::error::GenericErrorTree;
 use std::borrow::Cow;
 use thiserror::Error;
 
@@ -12,4 +13,16 @@ pub enum Error {
     InvalidState(Cow<'static, str>),
     #[error("initialization error: `{0}`")]
     InitError(Cow<'static, str>),
+    #[error("overflow error: `{0}`")]
+    Unsolvable(Cow<'static, str>),
+    #[error("{0}")]
+    NomParseError(String),
+}
+
+pub type NomError<'a> = GenericErrorTree<&'a str, &'static str, &'static str, Error>;
+
+impl<'a> From<nom::Err<NomError<'a>>> for Error {
+    fn from(value: nom::Err<NomError<'a>>) -> Self {
+        Self::NomParseError(value.to_string())
+    }
 }

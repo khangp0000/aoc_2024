@@ -7,6 +7,7 @@ use std::process::exit;
 use std::time::Duration;
 
 mod error;
+mod nom;
 mod space;
 mod utils;
 mod y2024;
@@ -154,7 +155,11 @@ fn solve_and_print_result(
         .map_err(|e| e.into())
         .and_then(|input| utils::solve(year, day, part, input.as_str()));
 
-    println!("Result {} day {} part {}: {:?}", year, day, part, res);
+    match &res {
+        Ok(res) => println!("Result on {} day {} part {}: {}", year, day, part, res),
+        Err(e) => println!("Error on {} day {} part {}: {}", year, day, part, e),
+    }
+
     res
 }
 
