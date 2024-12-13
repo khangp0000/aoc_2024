@@ -5,36 +5,66 @@ use crate::utils::ures;
 use gcd::Gcd;
 use nom::character::complete::{space0, u64};
 use nom::sequence::{pair, tuple};
-use nom::Parser;
+use nom::{IResult, Parser};
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
+use std::num::NonZeroU64;
 
 part_solver!();
 
 pub fn part1(input: &str) -> Result<ures, Error> {
-    let res = solve_input_parser(prize_parser()).final_parse(input)?;
+    let res = solve_input_parser(prize_parser).final_parse(input)?;
     Ok(res)
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
-    let res = solve_input_parser(prize_parser_2()).final_parse(input)?;
+    let res = solve_input_parser(prize_parser_2).final_parse(input)?;
     Ok(res)
 }
 
-fn button_a_parser<'a>() -> impl Parser<&'a str, (u64, u64), NomError<'a>> {
-    pair(tag("Button A: X+").precedes(u64), tag(", Y+").precedes(u64)).context("parse A line")
+fn non_zero_u64(input: &str) -> IResult<&str, NonZeroU64, NomError<'_>> {
+    u64.map_res(|v| {
+        NonZeroU64::new(v).ok_or_else(|| Error::ParseError("got 0 for non-zero".into()))
+    })
+    .context("parse non-zero 64")
+    .parse(input)
 }
 
-fn button_b_parser<'a>() -> impl Parser<&'a str, (u64, u64), NomError<'a>> {
-    pair(tag("Button B: X+").precedes(u64), tag(", Y+").precedes(u64)).context("parse B line")
+fn button_a_parser(input: &str) -> IResult<&str, (u64, u64), NomError> {
+    pair(
+        tag("Button A: X+")
+            .precedes(non_zero_u64)
+            .map(NonZeroU64::get),
+        tag(", Y+").precedes(non_zero_u64).map(NonZeroU64::get),
+    )
+    .context("parse A line")
+    .parse(input)
 }
 
-fn prize_parser<'a>() -> impl Parser<&'a str, (u64, u64), NomError<'a>> {
-    pair(tag("Prize: X=").precedes(u64), tag(", Y=").precedes(u64)).context("parse prize line")
+fn button_b_parser(input: &str) -> IResult<&str, (u64, u64), NomError> {
+    pair(
+        tag("Button B: X+")
+            .precedes(non_zero_u64)
+            .map(NonZeroU64::get),
+        tag(", Y+").precedes(non_zero_u64).map(NonZeroU64::get),
+    )
+    .context("parse B line")
+    .parse(input)
 }
 
-fn prize_parser_2<'a>() -> impl Parser<&'a str, (u64, u64), NomError<'a>> {
-    prize_parser().map(|(c1, c2)| (c1 + 10000000000000, c2 + 10000000000000))
+fn prize_parser(input: &str) -> IResult<&str, (u64, u64), NomError> {
+    pair(
+        tag("Prize: X=").precedes(non_zero_u64).map(NonZeroU64::get),
+        tag(", Y=").precedes(non_zero_u64).map(NonZeroU64::get),
+    )
+    .context("parse prize line")
+    .parse(input)
+}
+
+fn prize_parser_2(input: &str) -> IResult<&str, (u64, u64), NomError<'_>> {
+    prize_parser
+        .map(|(c1, c2)| (c1 + 10000000000000, c2 + 10000000000000))
+        .parse(input)
 }
 
 fn solve_block_parser<'a, F>(
@@ -44,8 +74,8 @@ where
     F: Parser<&'a str, (u64, u64), NomError<'a>> + 'a,
 {
     tuple((
-        single_line_not_eof(trim_space(button_a_parser())),
-        single_line_not_eof(trim_space(button_b_parser())),
+        single_line_not_eof(trim_space(button_a_parser)),
+        single_line_not_eof(trim_space(button_b_parser)),
         single_line(trim_space(prize_parser)),
     ))
     .cut()
