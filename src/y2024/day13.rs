@@ -1,27 +1,23 @@
 use crate::error::{Error, NomError};
-use crate::nom::{fold_separated_list0, single_line, single_line_not_eof, trim_space};
+use crate::nom::{fold_separated_list0, single_line, single_line_not_eof, trim_space, FinalParse};
 use crate::part_solver;
 use crate::utils::ures;
 use gcd::Gcd;
-use nom::bytes::complete::tag;
 use nom::character::complete::{space0, u64};
 use nom::sequence::{pair, tuple};
 use nom::Parser;
+use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
 
 part_solver!();
 
 pub fn part1(input: &str) -> Result<ures, Error> {
-    let (_, res) = solve_input_parser(prize_parser())
-        .all_consuming()
-        .parse(input)?;
+    let res = solve_input_parser(prize_parser()).final_parse(input)?;
     Ok(res)
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
-    let (_, res) = solve_input_parser(prize_parser_2())
-        .all_consuming()
-        .parse(input)?;
+    let res = solve_input_parser(prize_parser_2()).final_parse(input)?;
     Ok(res)
 }
 
@@ -52,7 +48,10 @@ where
         single_line_not_eof(trim_space(button_b_parser())),
         single_line(trim_space(prize_parser)),
     ))
+    .cut()
+    .context("parse block")
     .map_res_cut(|((a1, a2), (b1, b2), (c1, c2))| solve_day13_int_matrix(a1, a2, b1, b2, c1, c2))
+    .context("solving matrix")
 }
 
 fn solve_input_parser<'a, F>(prize_parser: F) -> impl Parser<&'a str, ures, NomError<'a>>
@@ -98,7 +97,7 @@ fn solve_day13_int_matrix(
         .ok_or_else(|| Error::Unsolvable("overflow while matching coefficient".into()))?;
     if multiplied_b1 == multiplied_b2 {
         if multiplied_c1 == multiplied_c2 {
-            return Err(Error::Unsolvable("Infinite solution".into()));
+            return Err(Error::Unsolvable("infinite solution".into()));
         } else {
             return Ok(None);
         }

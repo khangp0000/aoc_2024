@@ -70,7 +70,13 @@ fn main() {
     };
 
     let mut error_code = 0;
+    let mut first = false;
     'outer: for day in day_range {
+        if !first {
+            first = true;
+        } else {
+            println!()
+        }
         let mut submit = args.submit;
         for part in part_range.clone() {
             let res = solve_and_print_result(year, day, part, session.as_str());
@@ -88,7 +94,7 @@ fn main() {
                     .as_ref()
                     .map_err(|e| e.clone())
                     .and_then(|res| submit_result(year, day, part, res, session.as_str()));
-                match &res {
+                match res {
                     Ok(_) => {
                         println!(
                             "Submission successful for {} day {} part {}",
@@ -108,31 +114,25 @@ fn main() {
                         )) => {
                             println!(
                                 "Submission for {} day {} part {} is throttled: {}. Waiting for throttle to finish...",
-                                year, day, part, humantime::format_duration(*duration)
+                                year, day, part, humantime::format_duration(duration)
                             );
-                            retry = Some(*duration);
+                            retry = Some(duration);
                         }
                         Error::UtilsError(utils::UtilsError::SubmissionThrottled(_, None)) => {
                             error_code = 1;
-                            eprintln!(
-                                "Disabling submission due to previous submission error: {:?}",
-                                res
-                            );
+                            eprintln!("Disabling submission due to previous submission error");
                             submit = false;
                             if args.exit_on_failure {
-                                eprintln!("Exit early on error: {:?}", res);
+                                eprintln!("Exit early on error");
                                 break 'outer;
                             }
                         }
                         _ => {
                             error_code = 1;
-                            eprintln!(
-                                "Disabling submission due to previous submission error: {:?}",
-                                res
-                            );
+                            eprintln!("Disabling submission due to previous submission error");
                             submit = false;
                             if args.exit_on_failure {
-                                eprintln!("Exit early on error: {:?}", res);
+                                eprintln!("Exit early on error");
                                 break 'outer;
                             }
                         }

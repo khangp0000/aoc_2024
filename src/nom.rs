@@ -1,9 +1,11 @@
+use crate::error::NomError;
 use nom::branch::alt;
 use nom::character::complete::{line_ending, space0};
 use nom::combinator::eof;
 use nom::error::ParseError;
 use nom::sequence::delimited;
 use nom::{IResult, InputLength, Parser};
+use nom_supreme::final_parser::{final_parser, Location};
 use nom_supreme::ParserExt;
 
 /// A combinator that takes a parser `inner` and produces a parser that also consumes the following
@@ -31,6 +33,18 @@ where
     F: Parser<&'a str, O, E> + 'a,
 {
     delimited(space0, inner, space0)
+}
+
+pub trait FinalParse<I, O, E> {
+    fn final_parse(self, input: I) -> Result<O, E>;
+}
+
+impl<'a, O, P: Parser<&'a str, O, NomError<'a, &'a str>>>
+    FinalParse<&'a str, O, NomError<'static, Location>> for P
+{
+    fn final_parse(self, input: &'a str) -> Result<O, NomError<'static, Location>> {
+        final_parser(self)(input)
+    }
 }
 
 pub fn fold_separated_list0<I, O, O2, E, F, G, H, R, S>(
