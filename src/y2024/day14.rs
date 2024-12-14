@@ -52,10 +52,10 @@ fn maybe_has_tree<const W: usize, const H: usize>(board: &[[bool; W]; H]) -> boo
 
     for (idx, line) in board.iter().enumerate() {
         if let Some(pos) = find_subsequence(line, TREE_LINE_1) {
-            if Some(pos)
+            if Some(TREE_LINE_2)
                 == board
                     .get(idx + 5)
-                    .and_then(|l| find_subsequence(l, TREE_LINE_2))
+                    .and_then(|l| l.get(pos..pos + TREE_LINE_2.len()))
             {
                 return true;
             }
