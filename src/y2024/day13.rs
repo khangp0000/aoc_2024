@@ -1,14 +1,16 @@
 use crate::error::{Error, NomError};
-use crate::nom::{fold_separated_list0, single_line, single_line_not_eof, trim_space, FinalParse};
+use crate::nom::{
+    fold_separated_list0, non_zero_ures, single_line, single_line_not_eof, trim_space, FinalParse,
+};
 use crate::part_solver;
 use crate::utils::ures;
 use gcd::Gcd;
-use nom::character::complete::{space0, u64};
+use nom::character::complete::space0;
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
 use nom_supreme::tag::complete::tag;
 use nom_supreme::ParserExt;
-use std::num::NonZeroU64;
+use std::num::NonZero;
 
 part_solver!();
 
@@ -22,46 +24,38 @@ pub fn part2(input: &str) -> Result<ures, Error> {
     Ok(res)
 }
 
-fn non_zero_u64(input: &str) -> IResult<&str, NonZeroU64, NomError<'_>> {
-    u64.map_res(|v| {
-        NonZeroU64::new(v).ok_or_else(|| Error::ParseError("got 0 for non-zero".into()))
-    })
-    .context("parse non-zero 64")
-    .parse(input)
-}
-
-fn button_a_parser(input: &str) -> IResult<&str, (u64, u64), NomError> {
+fn button_a_parser(input: &str) -> IResult<&str, (ures, ures), NomError> {
     pair(
         tag("Button A: X+")
-            .precedes(non_zero_u64)
-            .map(NonZeroU64::get),
-        tag(", Y+").precedes(non_zero_u64).map(NonZeroU64::get),
+            .precedes(non_zero_ures)
+            .map(NonZero::get),
+        tag(", Y+").precedes(non_zero_ures).map(NonZero::get),
     )
     .context("parse A line")
     .parse(input)
 }
 
-fn button_b_parser(input: &str) -> IResult<&str, (u64, u64), NomError> {
+fn button_b_parser(input: &str) -> IResult<&str, (ures, ures), NomError> {
     pair(
         tag("Button B: X+")
-            .precedes(non_zero_u64)
-            .map(NonZeroU64::get),
-        tag(", Y+").precedes(non_zero_u64).map(NonZeroU64::get),
+            .precedes(non_zero_ures)
+            .map(NonZero::get),
+        tag(", Y+").precedes(non_zero_ures).map(NonZero::get),
     )
     .context("parse B line")
     .parse(input)
 }
 
-fn prize_parser(input: &str) -> IResult<&str, (u64, u64), NomError> {
+fn prize_parser(input: &str) -> IResult<&str, (ures, ures), NomError> {
     pair(
-        tag("Prize: X=").precedes(non_zero_u64).map(NonZeroU64::get),
-        tag(", Y=").precedes(non_zero_u64).map(NonZeroU64::get),
+        tag("Prize: X=").precedes(non_zero_ures).map(NonZero::get),
+        tag(", Y=").precedes(non_zero_ures).map(NonZero::get),
     )
     .context("parse prize line")
     .parse(input)
 }
 
-fn prize_parser_2(input: &str) -> IResult<&str, (u64, u64), NomError<'_>> {
+fn prize_parser_2(input: &str) -> IResult<&str, (ures, ures), NomError<'_>> {
     prize_parser
         .map(|(c1, c2)| (c1 + 10000000000000, c2 + 10000000000000))
         .parse(input)
@@ -69,9 +63,9 @@ fn prize_parser_2(input: &str) -> IResult<&str, (u64, u64), NomError<'_>> {
 
 fn solve_block_parser<'a, F>(
     prize_parser: F,
-) -> impl Parser<&'a str, Option<(u64, u64)>, NomError<'a>>
+) -> impl Parser<&'a str, Option<(ures, ures)>, NomError<'a>>
 where
-    F: Parser<&'a str, (u64, u64), NomError<'a>> + 'a,
+    F: Parser<&'a str, (ures, ures), NomError<'a>> + 'a,
 {
     tuple((
         single_line_not_eof(trim_space(button_a_parser)),
@@ -86,7 +80,7 @@ where
 
 fn solve_input_parser<'a, F>(prize_parser: F) -> impl Parser<&'a str, ures, NomError<'a>>
 where
-    F: Parser<&'a str, (u64, u64), NomError<'a>> + 'a,
+    F: Parser<&'a str, (ures, ures), NomError<'a>> + 'a,
 {
     fold_separated_list0(
         single_line_not_eof(space0),
@@ -103,13 +97,13 @@ where
 }
 
 fn solve_day13_int_matrix(
-    a1: u64,
-    a2: u64,
-    b1: u64,
-    b2: u64,
-    c1: u64,
-    c2: u64,
-) -> Result<Option<(u64, u64)>, Error> {
+    a1: ures,
+    a2: ures,
+    b1: ures,
+    b2: ures,
+    c1: ures,
+    c2: ures,
+) -> Result<Option<(ures, ures)>, Error> {
     let gcd = a1.gcd(a2);
     let mult_1 = a2 / gcd;
     let mult_2 = a1 / gcd;

@@ -1,12 +1,14 @@
-use crate::error::NomError;
+use crate::error::{Error, NomError};
 use nom::branch::alt;
-use nom::character::complete::{line_ending, space0};
+use nom::character::complete::{i64, line_ending, space0, u64};
 use nom::combinator::eof;
 use nom::error::ParseError;
 use nom::sequence::delimited;
-use nom::{IResult, InputLength, Parser};
+use nom::{AsChar, Compare, IResult, InputIter, InputLength, InputTake, Parser, Slice};
 use nom_supreme::final_parser::{final_parser, Location};
 use nom_supreme::ParserExt;
+use std::num::NonZero;
+use std::ops::RangeFrom;
 
 /// A combinator that takes a parser `inner` and produces a parser that also consumes the following
 /// line ending or eof, returning the output of `inner`.
@@ -33,6 +35,29 @@ where
     F: Parser<&'a str, O, E> + 'a,
 {
     delimited(space0, inner, space0)
+}
+
+pub fn ures<I, E: ParseError<I>>(input: I) -> IResult<I, crate::utils::ures, E>
+where
+    I: InputIter + Slice<RangeFrom<usize>> + InputLength,
+    <I as InputIter>::Item: AsChar,
+{
+    u64.map(|v| v as crate::utils::ures).parse(input)
+}
+
+pub fn ires<I, E: ParseError<I>>(input: I) -> IResult<I, crate::utils::ires, E>
+where
+    I: InputIter + Slice<RangeFrom<usize>> + InputLength + InputTake + Clone,
+    <I as InputIter>::Item: AsChar,
+    I: for<'a> Compare<&'a [u8]>,
+{
+    i64.map(|v| v as crate::utils::ires).parse(input)
+}
+
+pub fn non_zero_ures(input: &str) -> IResult<&str, NonZero<crate::utils::ures>, NomError<'_>> {
+    ures.map_res(|v| NonZero::new(v).ok_or_else(|| Error::ParseError("got 0 for non-zero".into())))
+        .context("parse non-zero ures")
+        .parse(input)
 }
 
 pub trait FinalParse<I, O, E> {

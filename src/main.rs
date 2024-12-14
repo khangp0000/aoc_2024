@@ -86,6 +86,8 @@ fn main() {
                     eprintln!("Exit early on error: {:?}", res);
                     break;
                 }
+                eprintln!("Disabling submission due to previous result compute error");
+                submit = false;
             }
             let mut retry = Some(Duration::from_secs(0));
             while submit && retry.is_some() {
@@ -120,7 +122,10 @@ fn main() {
                         }
                         Error::UtilsError(utils::UtilsError::SubmissionThrottled(_, None)) => {
                             error_code = 1;
-                            eprintln!("Disabling submission due to previous submission error");
+                            eprintln!(
+                                "Disabling submission due to previous submission error: {}",
+                                e
+                            );
                             submit = false;
                             if args.exit_on_failure {
                                 eprintln!("Exit early on error");
@@ -129,7 +134,10 @@ fn main() {
                         }
                         _ => {
                             error_code = 1;
-                            eprintln!("Disabling submission due to previous submission error");
+                            eprintln!(
+                                "Disabling submission due to previous submission error: {}",
+                                e
+                            );
                             submit = false;
                             if args.exit_on_failure {
                                 eprintln!("Exit early on error");
