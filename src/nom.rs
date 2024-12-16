@@ -2,11 +2,12 @@ use crate::error::{Error, NomError};
 use nom::branch::alt;
 use nom::character::complete::{i64, line_ending, space0, u64};
 use nom::combinator::eof;
-use nom::error::ParseError;
+use nom::error::{FromExternalError, ParseError};
 use nom::sequence::delimited;
 use nom::{AsChar, Compare, IResult, InputIter, InputLength, InputTake, Parser, Slice};
 use nom_supreme::final_parser::{final_parser, Location};
 use nom_supreme::ParserExt;
+use std::fmt::Debug;
 use std::num::NonZero;
 use std::ops::RangeFrom;
 
@@ -72,7 +73,7 @@ impl<'a, O, P: Parser<&'a str, O, NomError<'a, &'a str>>>
     }
 }
 
-pub fn fold_separated_list0<I, O, O2, E, F, G, H, R, S>(
+pub fn fold_separated_many0<I, O, O2, E, F, G, H, R, S>(
     mut sep: S,
     mut f: F,
     mut init: H,
@@ -120,6 +121,89 @@ where
                             i = i2;
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+pub fn fold_res_many1<I, O, E, E2, F, G, H, R>(
+    mut f: F,
+    mut init: H,
+    mut g: G,
+) -> impl FnMut(I) -> IResult<I, R, E>
+where
+    I: Clone + InputLength + Debug,
+    F: Parser<I, O, E>,
+    G: FnMut(R, O) -> Result<R, (R, Option<I>, nom::Err<E2>)>,
+    H: FnMut() -> R,
+    E: ParseError<I> + FromExternalError<I, E2>,
+{
+    move |i: I| {
+        let _i = i.clone();
+        let init = init();
+
+        match f.parse(_i) {
+            Err(nom::Err::Error(_)) => Err(nom::Err::Error(E::from_error_kind(
+                i,
+                nom::error::ErrorKind::Many1,
+            ))),
+            Err(e) => Err(e),
+            Ok((i1, o)) => {
+                match g(init, o) {
+                    Ok(mut acc) => {
+                        let mut input = i1;
+                        loop {
+                            let _input = input.clone();
+                            let len = input.input_len();
+
+                            match f.parse(_input) {
+                                Err(nom::Err::Error(_)) => {
+                                    break;
+                                }
+                                Err(e) => return Err(e),
+                                Ok((i, o)) => {
+                                    // infinite loop check: the parser must always consume
+                                    if i.input_len() == len {
+                                        return Err(nom::Err::Failure(E::from_error_kind(
+                                            i,
+                                            nom::error::ErrorKind::Many1,
+                                        )));
+                                    }
+
+                                    match g(acc, o) {
+                                        Ok(n_acc) => {
+                                            acc = n_acc;
+                                            input = i;
+                                        }
+                                        Err((n_acc, error_loc, e)) => match e {
+                                            nom::Err::Error(_) => {
+                                                acc = n_acc;
+                                                break;
+                                            }
+                                            e => {
+                                                return Err(e.map(|ee| {
+                                                    E::from_external_error(
+                                                        error_loc.unwrap_or(input),
+                                                        nom::error::ErrorKind::Many1,
+                                                        ee,
+                                                    )
+                                                }))
+                                            }
+                                        },
+                                    };
+                                }
+                            }
+                        }
+                        Ok((input, acc))
+                    }
+                    Err((_, error_loc, e)) => Err(e.map(|ee| {
+                        E::from_external_error(
+                            error_loc.unwrap_or(i1),
+                            nom::error::ErrorKind::Many1,
+                            ee,
+                        )
+                    })),
                 }
             }
         }

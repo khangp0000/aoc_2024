@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::part_solver;
-use crate::space::{BitBoard2d, Board2d, IterSpace, RefBoard2d, Space};
+use crate::space::space2d::{BitBoard2d, Board2d, RefBoard2d};
+use crate::space::{IterSpace, Space};
 use crate::utils::{cardinal, ures};
 use std::borrow::Cow;
 

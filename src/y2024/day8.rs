@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::part_solver;
-use crate::space::{IterSpace, RefBoard2d, Space};
+use crate::space::space2d::RefBoard2d;
+use crate::space::{IterSpace, Space};
 use crate::utils::{ires, ures};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};

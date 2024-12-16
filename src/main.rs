@@ -7,7 +7,9 @@ use std::process::exit;
 use std::time::Duration;
 
 mod error;
+mod graph;
 mod nom;
+mod set;
 mod space;
 mod utils;
 mod y2024;

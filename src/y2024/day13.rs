@@ -1,6 +1,6 @@
 use crate::error::{Error, NomError};
 use crate::nom::{
-    fold_separated_list0, non_zero_ures, single_line, single_line_not_eof, trim_space, FinalParse,
+    fold_separated_many0, non_zero_ures, single_line, single_line_not_eof, trim_space, FinalParse,
 };
 use crate::part_solver;
 use crate::utils::ures;
@@ -82,7 +82,7 @@ fn solve_input_parser<'a, F>(prize_parser: F) -> impl Parser<&'a str, ures, NomE
 where
     F: Parser<&'a str, (ures, ures), NomError<'a>> + 'a,
 {
-    fold_separated_list0(
+    fold_separated_many0(
         single_line_not_eof(space0),
         solve_block_parser(prize_parser),
         || 0,

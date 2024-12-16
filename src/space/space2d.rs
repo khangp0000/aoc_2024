@@ -1,33 +1,18 @@
+use crate::space::{IterMutSpace, IterSpace, Space};
 use bit_set::BitSet;
 use bit_vec::BitBlock;
+use derive_more::{Deref, DerefMut, Display};
 use std::borrow::Cow;
+use std::fmt::Write;
 use std::mem::replace;
+use std::str::from_utf8;
 
-pub trait Space<T, C, const N: usize> {
-    fn get(&self, idx: &[C; N]) -> Option<&T>;
-    fn set(&mut self, idx: &[C; N], val: T) -> Option<T>;
-    fn get_mut(&mut self, idx: &[C; N]) -> Option<&mut T>;
-}
-
-pub trait IterMutSpace<T, C, const N: usize> {
-    #[allow(dead_code)]
-    fn iter_mut(&mut self) -> impl Iterator<Item = ([usize; 2], &mut T)>
-    where
-        T: 'static;
-}
-
-pub trait IterSpace<T, C, const N: usize> {
-    fn iter(&self) -> impl Iterator<Item = ([usize; 2], &T)>
-    where
-        T: 'static;
-}
-
-#[derive(Clone)]
+#[derive(Clone, Debug, Deref, DerefMut)]
 pub struct Board2d<T> {
     inner: Vec<Vec<T>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Deref, DerefMut)]
 pub struct RefBoard2d<'a, T>
 where
     [T]: ToOwned<Owned = Vec<T>>,
@@ -182,7 +167,7 @@ impl<T> Board2d<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Deref, DerefMut)]
 pub struct BitBoard2d<B: BitBlock = usize> {
     inner: Vec<BitSet<B>>,
 }
@@ -231,27 +216,69 @@ impl<B: BitBlock> BitBoard2d<B> {
 }
 
 #[allow(dead_code)]
-pub trait Pos<const N: usize> {
-    fn shift(&self, idx: &[isize; N]) -> Option<[usize; N]>;
-    fn shift_dimension(&self, idx: usize, diff: isize) -> Option<[usize; N]>;
+pub trait DebugStrBoardPrinter {
+    fn print(&self) -> String;
 }
 
-impl<const N: usize> Pos<N> for [usize; N] {
-    #[inline]
-    fn shift(&self, diff: &[isize; N]) -> Option<[usize; N]> {
-        self.iter()
-            .enumerate()
-            .try_fold(Vec::with_capacity(N), |mut v, (idx, val)| {
-                v.push(val.checked_add_signed(diff[idx])?);
-                Some(v)
+impl<S: AsRef<[u8]>, B: Deref<Target = Vec<S>>> DebugStrBoardPrinter for B {
+    fn print(&self) -> String {
+        self.deref()
+            .iter()
+            .map(|v| from_utf8(v.as_ref()).unwrap())
+            .fold(String::new(), |mut acc, s| {
+                writeln!(acc, "{}", s).unwrap();
+                acc
             })
-            .map(|v| v.try_into().unwrap())
+    }
+}
+
+#[derive(Eq, PartialEq, Hash, Debug, Display, Clone, Copy)]
+pub enum Direction {
+    West,
+    North,
+    East,
+    South,
+}
+
+#[allow(dead_code)]
+impl Direction {
+    pub const fn get_movement_vec(&self) -> &'static [isize; 2] {
+        match self {
+            Direction::West => &[-1, 0],
+            Direction::North => &[0, -1],
+            Direction::East => &[1, 0],
+            Direction::South => &[0, 1],
+        }
     }
 
-    #[inline]
-    fn shift_dimension(&self, idx: usize, diff: isize) -> Option<[usize; N]> {
-        let mut res = *self;
-        res[idx] = res[idx].checked_add_signed(diff)?;
-        Some(res)
+    pub const fn clockwise_90(&self) -> Self {
+        match self {
+            Direction::West => Direction::North,
+            Direction::North => Direction::East,
+            Direction::East => Direction::South,
+            Direction::South => Direction::West,
+        }
+    }
+
+    pub const fn counter_clockwise_90(&self) -> Self {
+        match self {
+            Direction::West => Direction::South,
+            Direction::North => Direction::West,
+            Direction::East => Direction::North,
+            Direction::South => Direction::East,
+        }
+    }
+
+    pub const fn opposite(&self) -> Self {
+        match self {
+            Direction::West => Direction::East,
+            Direction::North => Direction::South,
+            Direction::East => Direction::West,
+            Direction::South => Direction::North,
+        }
+    }
+
+    pub const fn cardinal() -> &'static [Direction] {
+        &[Self::West, Self::North, Self::South, Self::East]
     }
 }

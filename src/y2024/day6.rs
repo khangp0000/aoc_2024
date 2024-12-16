@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::part_solver;
-use crate::space::{Board2d, Pos, Space};
+use crate::space::space2d::Board2d;
+use crate::space::{Pos, Space};
 use crate::utils::ures;
 use std::cmp::PartialEq;
 
