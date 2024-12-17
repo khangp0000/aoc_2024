@@ -79,11 +79,3 @@ pub trait NeighborFn<State, Weight, Metadata> {
         metadata: &Metadata,
     ) -> impl IntoIterator<Item = (State, Weight, Metadata)>;
 }
-
-// impl<State, Weight, Metadata, F> NeighborFn<State, Weight, Metadata> for F
-// where
-// F: FnMut(&State, &Weight, &Metadata) -> Box<dyn Iterator<Item=(State, Weight, Metadata)>> , {
-//     fn get_neighbors(&self, state: &State, weight: &Weight, metadata: &Metadata) -> impl IntoIterator<Item=(State, Weight, Metadata)> {
-//         (self)(state, weight, metadata)
-//     }
-// }
