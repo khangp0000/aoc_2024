@@ -87,9 +87,7 @@ impl Machine {
         match val {
             0..=3 => Ok(val as ures),
             4..=6 => Ok(self.reg[(val - 4) as usize]),
-            _ => Err(Error::ParseError(
-                format!("invalid combo {:?}", val as char).into(),
-            )),
+            _ => Err(Error::ParseError(format!("invalid combo '{}'", val).into())),
         }
     }
 }
@@ -100,8 +98,12 @@ pub fn part1(input: &str) -> Result<String, Error> {
     let mut s = String::with_capacity(iter.len() * 2);
 
     if let Some(first) = iter.next() {
-        write!(s, "{}", first).unwrap();
-        iter.for_each(|v| write!(s, ",{}", v).unwrap())
+        write!(s, "{}", first)
+            .map_err(|e| Error::InvalidState(format!("string build error< {}", e).into()))?;
+        iter.try_for_each(|v| {
+            write!(s, ",{}", v)
+                .map_err(|e| Error::InvalidState(format!("string build error< {}", e).into()))
+        })?
     }
     Ok(s)
 }
@@ -139,7 +141,11 @@ fn find_a_val_match_program_to_output<'a, I: Iterator<Item = &'a u8> + Clone>(
                 ));
             }
             if next_expected_output == program_output[0] {
-                let check_next = find_a_val_match_program_to_output(a_val, program_rev_iter.clone(), no_loop_program)?;
+                let check_next = find_a_val_match_program_to_output(
+                    a_val,
+                    program_rev_iter.clone(),
+                    no_loop_program,
+                )?;
                 if check_next.is_some() {
                     return Ok(check_next);
                 }

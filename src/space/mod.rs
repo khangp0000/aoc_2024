@@ -45,11 +45,10 @@ impl<const N: usize> Pos<N> for [usize; N] {
     fn shift(&self, diff: &[isize; N]) -> Option<[usize; N]> {
         self.iter()
             .enumerate()
-            .try_fold(Vec::with_capacity(N), |mut v, (idx, val)| {
-                v.push(val.checked_add_signed(diff[idx])?);
+            .try_fold([0; N], |mut v, (idx, val)| {
+                v[idx] = val.checked_add_signed(diff[idx])?;
                 Some(v)
             })
-            .map(|v| v.try_into().unwrap())
     }
 
     #[inline]

@@ -229,7 +229,14 @@ fn parse_board_and_solve_2(input: &str) -> IResult<&str, ures, NomError> {
                 &mut pos,
                 NonZero::new(-1).unwrap(),
                 &mut visited,
-            ),
+            )
+            .map_err(|e| {
+                nom::Err::Failure(NomError::from_external_error(
+                    remaining.slice(index..),
+                    nom::error::ErrorKind::Char,
+                    e,
+                ))
+            })?,
             b'>' => {
                 let [x, y] = &mut pos;
                 if let Some(line) = board.deref_mut().get_mut(*y) {
@@ -238,7 +245,14 @@ fn parse_board_and_solve_2(input: &str) -> IResult<&str, ures, NomError> {
                     }
                 }
             }
-            b'v' => step_vertical_2(&mut board, &mut pos, NonZero::new(1).unwrap(), &mut visited),
+            b'v' => step_vertical_2(&mut board, &mut pos, NonZero::new(1).unwrap(), &mut visited)
+                .map_err(|e| {
+                nom::Err::Failure(NomError::from_external_error(
+                    remaining.slice(index..),
+                    nom::error::ErrorKind::Char,
+                    e,
+                ))
+            })?,
             b if b.is_ascii_whitespace() => continue,
             _ => {
                 return Err(nom::Err::Failure(NomError::from_external_error(
@@ -260,7 +274,7 @@ fn check_vertical_2(
     mut queue: VecDeque<[usize; 2]>,
     y_diff: NonZero<isize>,
     visited: &mut IndexSet<[usize; 2]>,
-) -> bool {
+) -> Result<bool, Error> {
     while let Some(pos) = queue.pop_front() {
         let [x, y] = pos;
 
@@ -268,14 +282,28 @@ fn check_vertical_2(
             .checked_add_signed(y_diff.get())
             .and_then(|next_y| board.get(&[x, next_y]).map(|val| ([x, next_y], val)))
         {
-            Some((_, &b'#')) | None => return false,
+            Some((_, &b'#')) | None => return Ok(false),
             Some((next_pos, &b']')) => {
                 let [x, y] = &next_pos;
-                ([x.checked_sub(1).unwrap(), *y], next_pos)
+                (
+                    [
+                        x.checked_sub(1)
+                            .ok_or_else(|| Error::InvalidState("out of bound".into()))?,
+                        *y,
+                    ],
+                    next_pos,
+                )
             }
             Some((next_pos, b'[')) => {
                 let [x, y] = &next_pos;
-                (next_pos, [x.checked_add(1).unwrap(), *y])
+                (
+                    next_pos,
+                    [
+                        x.checked_add(1)
+                            .ok_or_else(|| Error::InvalidState("out of bound".into()))?,
+                        *y,
+                    ],
+                )
             }
             Some(_) => {
                 continue;
@@ -290,7 +318,7 @@ fn check_vertical_2(
         queue.push_back(right_pos);
     }
 
-    true
+    Ok(true)
 }
 
 #[inline]
@@ -299,25 +327,38 @@ fn step_vertical_2(
     pos: &mut [usize; 2],
     y_diff: NonZero<isize>,
     visited: &mut IndexSet<[usize; 2]>,
-) {
+) -> Result<(), Error> {
     let mut queue = VecDeque::new();
     queue.push_back(*pos);
-    if check_vertical_2(board, queue, y_diff, visited) {
+    if check_vertical_2(board, queue, y_diff, visited)? {
         let y_diff = y_diff.get();
         for box_left in visited.drain(..).rev() {
-            board.swap(&box_left, &box_left.shift_dimension(1, y_diff).unwrap());
             board.swap(
-                &box_left.shift_dimension(0, 1).unwrap(),
-                &box_left.shift(&[1, y_diff]).unwrap(),
+                &box_left,
+                &box_left
+                    .shift_dimension(1, y_diff)
+                    .ok_or_else(|| Error::InvalidState("out of bound".into()))?,
+            );
+            board.swap(
+                &box_left
+                    .shift_dimension(0, 1)
+                    .ok_or_else(|| Error::InvalidState("out of bound".into()))?,
+                &box_left
+                    .shift(&[1, y_diff])
+                    .ok_or_else(|| Error::InvalidState("out of bound".into()))?,
             );
         }
 
-        let next_pos = pos.shift_dimension(1, y_diff).unwrap();
+        let next_pos = pos
+            .shift_dimension(1, y_diff)
+            .ok_or_else(|| Error::InvalidState("out of bound".into()))?;
         board.swap(pos, &next_pos);
         *pos = next_pos;
     } else {
         visited.clear()
     }
+
+    Ok(())
 }
 
 #[inline]
