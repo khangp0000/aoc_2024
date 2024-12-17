@@ -24,7 +24,7 @@ impl Machine {
             if let Some(operand) = instruction.get(self.instruction_counter as usize + 1) {
                 match opcode {
                     0 => self.reg[0] >>= self.combo(*operand)?,
-                    1 => self.reg[1] ^= *operand as usize,
+                    1 => self.reg[1] ^= *operand as ures,
                     2 => self.reg[1] = self.combo(*operand)? & 7,
                     3 => {
                         if self.reg[0] != 0 {
