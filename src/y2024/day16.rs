@@ -1,4 +1,5 @@
 use crate::error::{Error, NomError};
+use crate::graph::MaybeProcessed::{Processed, Skip};
 use crate::graph::{Dijkstra, NeighborFn};
 use crate::nom::{fold_res_many1, single_line, FinalParse};
 use crate::part_solver;
@@ -13,7 +14,6 @@ use nom_supreme::ParserExt;
 use std::borrow::Cow;
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet};
-use crate::graph::MaybeProcessed::{Processed, Skip};
 
 part_solver!();
 type LineAndStartPosAndEndPosCow<'a> = (
@@ -122,7 +122,7 @@ pub fn part1(input: &str) -> Result<ures, Error> {
                     return Ok(weight);
                 }
             }
-            _ => continue
+            _ => continue,
         }
     }
 }
@@ -156,8 +156,11 @@ pub fn part2(input: &str) -> Result<ures, Error> {
                         break;
                     }
                 }
-                if best_parents.insert(state, (weight, parent.into_iter().collect())).is_some() {
-                    return Err(Error::InvalidState("node is being processed twice".into()))
+                if best_parents
+                    .insert(state, (weight, parent.into_iter().collect()))
+                    .is_some()
+                {
+                    return Err(Error::InvalidState("node is being processed twice".into()));
                 }
                 let (next_pos, _) = state;
                 if next_pos == end {
@@ -170,7 +173,9 @@ pub fn part2(input: &str) -> Result<ures, Error> {
                         break;
                     }
                 }
-                let (len, parents) = best_parents.get_mut(&state).ok_or(Error::InvalidState("unprocessed node is skipped".into()))?;
+                let (len, parents) = best_parents
+                    .get_mut(&state)
+                    .ok_or(Error::InvalidState("unprocessed node is skipped".into()))?;
                 if *len == weight {
                     if let Some(parent) = parent {
                         parents.push(parent)

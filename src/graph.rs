@@ -1,9 +1,9 @@
 use crate::error::Error;
+use crate::graph::MaybeProcessed::{Processed, Skip};
 use crate::set::Set;
 use derive_more::{From, Into};
 use std::cmp::{Ordering, Reverse};
 use std::collections::BinaryHeap;
-use crate::graph::MaybeProcessed::{Processed, Skip};
 
 #[derive(From, Into)]
 pub struct StateWithWeightAndMetadata<S, W: Ord, M>(S, W, M);
@@ -53,13 +53,11 @@ where
     type Item = Result<MaybeProcessed<(State, Weight, Metadata)>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(Reverse(state_weight_metadata)) = self.queue.pop() {
+        if let Some(Reverse(state_weight_metadata)) = self.queue.pop() {
             let (state, weight, metadata) = state_weight_metadata.into();
             match self.visited.insert(state.clone()) {
                 Err(e) => return Some(Err(e)),
-                Ok(false) => {
-                    return Some(Ok(Skip((state, weight, metadata))))
-                },
+                Ok(false) => return Some(Ok(Skip((state, weight, metadata)))),
                 Ok(true) => self
                     .neighbor_fn
                     .get_neighbors(&state, &weight, &metadata)
