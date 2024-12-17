@@ -3,6 +3,7 @@ use crate::set::Set;
 use derive_more::{From, Into};
 use std::cmp::{Ordering, Reverse};
 use std::collections::BinaryHeap;
+use crate::graph::MaybeProcessed::{Processed, Skip};
 
 #[derive(From, Into)]
 pub struct StateWithWeightAndMetadata<S, W: Ord, M>(S, W, M);
@@ -26,6 +27,11 @@ impl<S, W: Ord, M> Ord for StateWithWeightAndMetadata<S, W, M> {
     }
 }
 
+pub enum MaybeProcessed<T> {
+    Processed(T),
+    Skip(T),
+}
+
 pub struct Dijkstra<State, Weight, Metadata, VisitedStateSet, NeighborFnObj>
 where
     Weight: Ord,
@@ -44,15 +50,17 @@ where
     VisitedStateSet: Set<State>,
     NeighborFnObj: NeighborFn<State, Weight, Metadata>,
 {
-    type Item = Result<(State, Weight, Metadata), Error>;
+    type Item = Result<MaybeProcessed<(State, Weight, Metadata)>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(Reverse(state_weight_metadata)) = self.queue.pop() {
             let (state, weight, metadata) = state_weight_metadata.into();
-            match self.visited.contains(&state) {
+            match self.visited.insert(state.clone()) {
                 Err(e) => return Some(Err(e)),
-                Ok(true) => continue,
-                Ok(false) => self
+                Ok(false) => {
+                    return Some(Ok(Skip((state, weight, metadata))))
+                },
+                Ok(true) => self
                     .neighbor_fn
                     .get_neighbors(&state, &weight, &metadata)
                     .into_iter()
@@ -60,11 +68,8 @@ where
                     .map(Reverse)
                     .for_each(|swm| self.queue.push(swm)),
             }
-            if let Err(e) = self.visited.insert(state.clone()) {
-                return Some(Err(e));
-            }
 
-            return Some(Ok((state, weight, metadata)));
+            return Some(Ok(Processed((state, weight, metadata))));
         }
 
         None

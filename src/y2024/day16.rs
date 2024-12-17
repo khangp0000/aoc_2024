@@ -13,6 +13,7 @@ use nom_supreme::ParserExt;
 use std::borrow::Cow;
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet};
+use crate::graph::MaybeProcessed::{Processed, Skip};
 
 part_solver!();
 type LineAndStartPosAndEndPosCow<'a> = (
@@ -26,23 +27,10 @@ type BoardAndStartPosAndEndPos<'a> = (RefBoard2d<'a, u8>, [usize; 2], [usize; 2]
 type State = ([usize; 2], Direction);
 type Weight = ures;
 type Metadata = ();
+type Metadata2 = Option<State>;
 
 #[derive(Deref, DerefMut, From)]
 struct BoardNeighbor<'a>(RefBoard2d<'a, u8>);
-
-struct TrackBestParents<'a> {
-    board_neighbor_fn: BoardNeighbor<'a>,
-    best_parents: HashMap<State, (Weight, Vec<State>)>,
-}
-
-impl<'a> From<RefBoard2d<'a, u8>> for TrackBestParents<'a> {
-    fn from(value: RefBoard2d<'a, u8>) -> Self {
-        Self {
-            board_neighbor_fn: value.into(),
-            best_parents: HashMap::new(),
-        }
-    }
-}
 
 impl NeighborFn<State, Weight, Metadata> for BoardNeighbor<'_> {
     fn get_neighbors(
@@ -55,6 +43,7 @@ impl NeighborFn<State, Weight, Metadata> for BoardNeighbor<'_> {
         let (pos, old_direction) = state;
         let res = Direction::cardinal()
             .iter()
+            .filter(|&new_direction| *new_direction != old_direction.opposite())
             .filter_map(|new_direction| {
                 pos.shift(new_direction.get_movement_vec())
                     .filter(|new_pos| board.get(new_pos).is_some_and(|&v| v != b'#'))
@@ -72,32 +61,32 @@ impl NeighborFn<State, Weight, Metadata> for BoardNeighbor<'_> {
     }
 }
 
-impl NeighborFn<State, Weight, Metadata> for TrackBestParents<'_> {
+impl NeighborFn<State, Weight, Metadata2> for BoardNeighbor<'_> {
     fn get_neighbors(
         &mut self,
         state: &State,
         weight: &Weight,
-        m: &Metadata,
-    ) -> impl IntoIterator<Item = (State, Weight, Metadata)> {
-        self.board_neighbor_fn
-            .get_neighbors(state, weight, m)
-            .into_iter()
-            .inspect(|(child_state, weight, _)| {
-                self.best_parents
-                    .entry(*child_state)
-                    .and_modify(|(best_weight, best_parents_list)| {
-                        match (*best_weight).cmp(weight) {
-                            Ordering::Equal => best_parents_list.push(*state),
-                            Ordering::Greater => {
-                                best_parents_list.clear();
-                                best_parents_list.push(*state);
-                                *best_weight = *weight;
-                            }
-                            Ordering::Less => {}
-                        }
-                    })
-                    .or_insert((*weight, vec![*state]));
+        _: &Metadata2,
+    ) -> impl IntoIterator<Item = (State, Weight, Metadata2)> {
+        let board = self.deref_mut();
+        let (pos, old_direction) = state;
+        let res = Direction::cardinal()
+            .iter()
+            .filter(|&new_direction| *new_direction != old_direction.opposite())
+            .filter_map(|new_direction| {
+                pos.shift(new_direction.get_movement_vec())
+                    .filter(|new_pos| board.get(new_pos).is_some_and(|&v| v != b'#'))
+                    .map(|new_pos| (new_pos, *new_direction))
             })
+            .map(|new_state| {
+                let (_, new_direction) = &new_state;
+                (
+                    new_state,
+                    *weight + calculate_cost(*old_direction, *new_direction),
+                    Some(*state),
+                )
+            });
+        res
     }
 }
 
@@ -120,43 +109,77 @@ pub fn part1(input: &str) -> Result<ures, Error> {
     dijkstra
         .queue
         .push(Reverse(((start, Direction::East), 0, ()).into()));
+    dijkstra
+        .queue
+        .push(Reverse(((start, Direction::West), 2000, ()).into()));
     loop {
         match dijkstra.next() {
             None => return Err(Error::Unsolvable("cannot find path to end".into())),
             Some(Err(e)) => return Err(e),
-            Some(Ok((state, weight, _metadata))) => {
+            Some(Ok(Processed((state, weight, _metadata)))) => {
                 let (next_pos, _) = state;
                 if next_pos == end {
                     return Ok(weight);
                 }
             }
+            _ => continue
         }
     }
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
     let (board, start, end) = parse_board_1.final_parse(input)?;
+
     let mut dijkstra = Dijkstra {
         queue: BinaryHeap::new(),
-        neighbor_fn: TrackBestParents::from(board),
+        neighbor_fn: BoardNeighbor::from(board),
         visited: HashSet::new(),
     };
+
+    let mut best_parents: HashMap<State, (Weight, Vec<State>)> = HashMap::new();
+
     dijkstra
         .queue
-        .push(Reverse(((start, Direction::East), 0, ()).into()));
+        .push(Reverse(((start, Direction::East), 0, None).into()));
+    dijkstra
+        .queue
+        .push(Reverse(((start, Direction::West), 2000, None).into()));
+
+    let mut end_shortest_len = None;
     loop {
         match dijkstra.next() {
             None => return Err(Error::Unsolvable("cannot find path to end".into())),
             Some(Err(e)) => return Err(e),
-            Some(Ok((state, _weight, _metadata))) => {
+            Some(Ok(Processed((state, weight, parent)))) => {
+                if let Some(end_shortest_len) = end_shortest_len {
+                    if end_shortest_len < weight {
+                        break;
+                    }
+                }
+                if best_parents.insert(state, (weight, parent.into_iter().collect())).is_some() {
+                    return Err(Error::InvalidState("node is being processed twice".into()))
+                }
                 let (next_pos, _) = state;
                 if next_pos == end {
-                    break;
+                    end_shortest_len.replace(weight);
+                }
+            }
+            Some(Ok(Skip((state, weight, parent)))) => {
+                if let Some(end_shortest_len) = end_shortest_len {
+                    if end_shortest_len < weight {
+                        break;
+                    }
+                }
+                let (len, parents) = best_parents.get_mut(&state).ok_or(Error::InvalidState("unprocessed node is skipped".into()))?;
+                if *len == weight {
+                    if let Some(parent) = parent {
+                        parents.push(parent)
+                    }
                 }
             }
         }
     }
-    let best_parents = dijkstra.neighbor_fn.best_parents;
+
     let mut visited = HashSet::new();
     visited.insert((start, Direction::East));
     let (mut work, _) = Direction::cardinal()

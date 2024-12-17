@@ -2,6 +2,7 @@ use crate::error::Error;
 use std::collections::HashSet;
 use std::hash::Hash;
 
+#[allow(dead_code)]
 pub trait Set<T> {
     fn contains(&self, elem: &T) -> Result<bool, Error>;
     fn insert(&mut self, elem: T) -> Result<bool, Error>;
