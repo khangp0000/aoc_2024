@@ -109,14 +109,14 @@ pub fn part1(input: &str) -> Result<String, Error> {
 pub fn part2(input: &str) -> Result<ures, Error> {
     let (_, program) = input_parser.final_parse(input)?;
 
-    validate_part_2_program(&program)?;
+    validate_part_2_solvable(&program)?;
 
     let no_loop_program: Vec<u8> = program.iter().cloned().take(program.len() - 2).collect();
-    check(0, program.iter().rev(), &no_loop_program)?
+    find_a_val_match_program_to_output(0, program.iter().rev(), &no_loop_program)?
         .ok_or_else(|| Error::Unsolvable("cannot find valid a_val".into()))
 }
 
-fn check<'a, I: Iterator<Item = &'a u8> + Clone>(
+fn find_a_val_match_program_to_output<'a, I: Iterator<Item = &'a u8> + Clone>(
     a_val: ures,
     mut program_rev_iter: I,
     no_loop_program: &[u8],
@@ -139,7 +139,7 @@ fn check<'a, I: Iterator<Item = &'a u8> + Clone>(
                 ));
             }
             if next_expected_output == program_output[0] {
-                let check_next = check(a_val, program_rev_iter.clone(), no_loop_program)?;
+                let check_next = find_a_val_match_program_to_output(a_val, program_rev_iter.clone(), no_loop_program)?;
                 if check_next.is_some() {
                     return Ok(check_next);
                 }
@@ -152,7 +152,7 @@ fn check<'a, I: Iterator<Item = &'a u8> + Clone>(
     }
 }
 
-fn validate_part_2_program(program: &[u8]) -> Result<(), Error> {
+fn validate_part_2_solvable(program: &[u8]) -> Result<(), Error> {
     let mut error = false;
     if program[(program.len() - 2)..] != [3, 0] {
         error = true;
