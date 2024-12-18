@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::graph::MaybeProcessed::{Processed, Skip};
+use crate::graph::MaybeProcessed::{Processed, Skipped};
 use crate::set::Set;
 use derive_more::{From, Into};
 use std::cmp::{Ordering, Reverse};
@@ -29,7 +29,7 @@ impl<S, W: Ord, M> Ord for StateWithWeightAndMetadata<S, W, M> {
 
 pub enum MaybeProcessed<T> {
     Processed(T),
-    Skip(T),
+    Skipped(T),
 }
 
 pub struct Dijkstra<State, Weight, Metadata, VisitedStateSet, NeighborFnObj>
@@ -58,7 +58,7 @@ where
             let (state, _, _) = &swm;
             match self.visited.insert(state.clone()) {
                 Err(e) => return Some(Err(e)),
-                Ok(false) => return Some(Ok(Skip(swm))),
+                Ok(false) => return Some(Ok(Skipped(swm))),
                 Ok(true) => self
                     .neighbor_fn
                     .get_neighbors(&swm)
@@ -98,12 +98,50 @@ where
             let (state, _) = &state_weight_metadata;
             match self.visited.insert(state.clone()) {
                 Err(e) => return Some(Err(e)),
-                Ok(false) => return Some(Ok(Skip(state_weight_metadata))),
+                Ok(false) => return Some(Ok(Skipped(state_weight_metadata))),
                 Ok(true) => self
                     .neighbor_fn
                     .get_neighbors(&state_weight_metadata)
                     .into_iter()
                     .for_each(|swm| self.queue.push_back(swm)),
+            }
+
+            return Some(Ok(Processed(state_weight_metadata)));
+        }
+
+        None
+    }
+}
+
+pub struct Dfs<State, Metadata, VisitedStateSet, NeighborFnObj>
+where
+    VisitedStateSet: Set<State>,
+{
+    pub queue: Vec<(State, Metadata)>,
+    pub neighbor_fn: NeighborFnObj,
+    pub visited: VisitedStateSet,
+}
+
+impl<State, Metadata, VisitedStateSet, NeighborFnObj> Iterator
+for Dfs<State, Metadata, VisitedStateSet, NeighborFnObj>
+where
+    State: Clone,
+    VisitedStateSet: Set<State>,
+    NeighborFnObj: NeighborFn<(State, Metadata)>,
+{
+    type Item = Result<MaybeProcessed<(State, Metadata)>, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(state_weight_metadata) = self.queue.pop() {
+            let (state, _) = &state_weight_metadata;
+            match self.visited.insert(state.clone()) {
+                Err(e) => return Some(Err(e)),
+                Ok(false) => return Some(Ok(Skipped(state_weight_metadata))),
+                Ok(true) => self
+                    .neighbor_fn
+                    .get_neighbors(&state_weight_metadata)
+                    .into_iter()
+                    .for_each(|swm| self.queue.push(swm)),
             }
 
             return Some(Ok(Processed(state_weight_metadata)));

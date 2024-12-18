@@ -1,5 +1,5 @@
 use crate::error::{Error, NomError};
-use crate::graph::MaybeProcessed::{Processed, Skip};
+use crate::graph::MaybeProcessed::{Processed, Skipped};
 use crate::graph::{Dijkstra, NeighborFn};
 use crate::nom::{fold_res_many1, single_line, FinalParse};
 use crate::part_solver;
@@ -165,7 +165,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
                     end_shortest_len.replace(weight);
                 }
             }
-            Some(Ok(Skip((state, weight, parent)))) => {
+            Some(Ok(Skipped((state, weight, parent)))) => {
                 if let Some(end_shortest_len) = end_shortest_len {
                     if end_shortest_len < weight {
                         break;
