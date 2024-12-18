@@ -32,13 +32,12 @@ type Metadata2 = Option<State>;
 #[derive(Deref, DerefMut, From)]
 struct BoardNeighbor<'a>(RefBoard2d<'a, u8>);
 
-impl NeighborFn<State, Weight, Metadata> for BoardNeighbor<'_> {
+impl NeighborFn<(State, Weight, Metadata)> for BoardNeighbor<'_> {
     fn get_neighbors(
         &mut self,
-        state: &State,
-        weight: &Weight,
-        _: &Metadata,
+        swm: &(State, Weight, Metadata),
     ) -> impl IntoIterator<Item = (State, Weight, Metadata)> {
+        let (state, weight, _) = &swm;
         let board = self.deref_mut();
         let (pos, old_direction) = state;
         let res = Direction::cardinal()
@@ -61,13 +60,12 @@ impl NeighborFn<State, Weight, Metadata> for BoardNeighbor<'_> {
     }
 }
 
-impl NeighborFn<State, Weight, Metadata2> for BoardNeighbor<'_> {
+impl NeighborFn<(State, Weight, Metadata2)> for BoardNeighbor<'_> {
     fn get_neighbors(
         &mut self,
-        state: &State,
-        weight: &Weight,
-        _: &Metadata2,
+        swm: &(State, Weight, Metadata2),
     ) -> impl IntoIterator<Item = (State, Weight, Metadata2)> {
+        let (state, weight, _) = &swm;
         let board = self.deref_mut();
         let (pos, old_direction) = state;
         let res = Direction::cardinal()

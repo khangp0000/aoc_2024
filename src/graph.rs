@@ -3,7 +3,7 @@ use crate::graph::MaybeProcessed::{Processed, Skip};
 use crate::set::Set;
 use derive_more::{From, Into};
 use std::cmp::{Ordering, Reverse};
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, VecDeque};
 
 #[derive(From, Into)]
 pub struct StateWithWeightAndMetadata<S, W: Ord, M>(S, W, M);
@@ -48,37 +48,71 @@ where
     State: Clone,
     Weight: Ord,
     VisitedStateSet: Set<State>,
-    NeighborFnObj: NeighborFn<State, Weight, Metadata>,
+    NeighborFnObj: NeighborFn<(State, Weight, Metadata)>,
 {
     type Item = Result<MaybeProcessed<(State, Weight, Metadata)>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(Reverse(state_weight_metadata)) = self.queue.pop() {
-            let (state, weight, metadata) = state_weight_metadata.into();
+            let swm = state_weight_metadata.into();
+            let (state, _, _) = &swm;
             match self.visited.insert(state.clone()) {
                 Err(e) => return Some(Err(e)),
-                Ok(false) => return Some(Ok(Skip((state, weight, metadata)))),
+                Ok(false) => return Some(Ok(Skip(swm))),
                 Ok(true) => self
                     .neighbor_fn
-                    .get_neighbors(&state, &weight, &metadata)
+                    .get_neighbors(&swm)
                     .into_iter()
                     .map(StateWithWeightAndMetadata::from)
                     .map(Reverse)
                     .for_each(|swm| self.queue.push(swm)),
             }
 
-            return Some(Ok(Processed((state, weight, metadata))));
+            return Some(Ok(Processed(swm)));
         }
 
         None
     }
 }
 
-pub trait NeighborFn<State, Weight, Metadata> {
-    fn get_neighbors(
-        &mut self,
-        state: &State,
-        weight: &Weight,
-        metadata: &Metadata,
-    ) -> impl IntoIterator<Item = (State, Weight, Metadata)>;
+pub struct Bfs<State, Metadata, VisitedStateSet, NeighborFnObj>
+where
+    VisitedStateSet: Set<State>,
+{
+    pub queue: VecDeque<(State, Metadata)>,
+    pub neighbor_fn: NeighborFnObj,
+    pub visited: VisitedStateSet,
+}
+
+impl<State, Metadata, VisitedStateSet, NeighborFnObj> Iterator
+    for Bfs<State, Metadata, VisitedStateSet, NeighborFnObj>
+where
+    State: Clone,
+    VisitedStateSet: Set<State>,
+    NeighborFnObj: NeighborFn<(State, Metadata)>,
+{
+    type Item = Result<MaybeProcessed<(State, Metadata)>, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(state_weight_metadata) = self.queue.pop_front() {
+            let (state, _) = &state_weight_metadata;
+            match self.visited.insert(state.clone()) {
+                Err(e) => return Some(Err(e)),
+                Ok(false) => return Some(Ok(Skip(state_weight_metadata))),
+                Ok(true) => self
+                    .neighbor_fn
+                    .get_neighbors(&state_weight_metadata)
+                    .into_iter()
+                    .for_each(|swm| self.queue.push_back(swm)),
+            }
+
+            return Some(Ok(Processed(state_weight_metadata)));
+        }
+
+        None
+    }
+}
+
+pub trait NeighborFn<T> {
+    fn get_neighbors(&mut self, state: &T) -> impl IntoIterator<Item = T>;
 }

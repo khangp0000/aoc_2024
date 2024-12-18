@@ -5,7 +5,7 @@ use nom::combinator::eof;
 use nom::error::{FromExternalError, ParseError};
 use nom::sequence::delimited;
 use nom::{AsChar, Compare, IResult, InputIter, InputLength, InputTake, Parser, Slice};
-use nom_supreme::final_parser::{final_parser, Location};
+use nom_supreme::final_parser::{final_parser, ExtractContext, Location};
 use nom_supreme::ParserExt;
 use std::fmt::Debug;
 use std::num::NonZero;
@@ -63,6 +63,7 @@ pub fn non_zero_ures(input: &str) -> IResult<&str, NonZero<crate::utils::ures>, 
 
 pub trait FinalParse<I, O, E> {
     fn final_parse(self, input: I) -> Result<O, E>;
+    fn partial_parse(self, input: I) -> Result<O, E>;
 }
 
 impl<'a, O, P: Parser<&'a str, O, NomError<'a, &'a str>>>
@@ -70,6 +71,18 @@ impl<'a, O, P: Parser<&'a str, O, NomError<'a, &'a str>>>
 {
     fn final_parse(self, input: &'a str) -> Result<O, NomError<'static, Location>> {
         final_parser(self)(input)
+    }
+
+    fn partial_parse(self, input: &'a str) -> Result<O, NomError<'static, Location>> {
+        match self.complete().parse(input) {
+            Ok((_, parsed)) => Ok(parsed),
+            Err(nom::Err::Error(err)) | Err(nom::Err::Failure(err)) => {
+                Err(err.extract_context(input))
+            }
+            Err(nom::Err::Incomplete(..)) => {
+                unreachable!("Complete combinator should make this impossible")
+            }
+        }
     }
 }
 

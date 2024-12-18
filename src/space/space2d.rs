@@ -2,14 +2,21 @@ use crate::space::{IterMutSpace, IterSpace, Space};
 use bit_set::BitSet;
 use bit_vec::BitBlock;
 use derive_more::{Deref, DerefMut, Display};
-use std::borrow::Cow;
+use std::borrow::{BorrowMut, Cow};
 use std::fmt::Write;
+use std::marker::PhantomData;
 use std::mem::replace;
 use std::str::from_utf8;
 
 #[derive(Clone, Debug, Deref, DerefMut)]
-pub struct Board2d<T> {
-    inner: Vec<Vec<T>>,
+pub struct Board2d<T, Vy: BorrowMut<[Vx]> = Vec<Vec<T>>, Vx: BorrowMut<[T]> = Vec<T>> {
+    inner: Vy,
+    #[deref(ignore)]
+    #[deref_mut(ignore)]
+    phantom_data_t: PhantomData<T>,
+    #[deref(ignore)]
+    #[deref_mut(ignore)]
+    phantom_data_vx: PhantomData<Vx>,
 }
 
 #[derive(Clone, Debug, Deref, DerefMut)]
@@ -20,23 +27,27 @@ where
     inner: Vec<Cow<'a, [T]>>,
 }
 
-impl<T> Space<T, usize, 2> for Board2d<T> {
+impl<T, Vy: BorrowMut<[Vx]>, Vx: BorrowMut<[T]>> Space<T, usize, 2> for Board2d<T, Vy, Vx> {
     fn get(&self, idx: &[usize; 2]) -> Option<&T> {
         let [x, y] = idx;
-        self.inner.get(*y).and_then(|v| v.get(*x))
+        self.inner.borrow().get(*y).and_then(|v| v.borrow().get(*x))
     }
 
     fn set(&mut self, idx: &[usize; 2], val: T) -> Option<T> {
         let [x, y] = idx;
         self.inner
+            .borrow_mut()
             .get_mut(*y)
-            .and_then(|v| v.get_mut(*x))
+            .and_then(|v| v.borrow_mut().get_mut(*x))
             .map(|v| replace(v, val))
     }
 
     fn get_mut(&mut self, idx: &[usize; 2]) -> Option<&mut T> {
         let [x, y] = idx;
-        self.inner.get_mut(*y).and_then(|v| v.get_mut(*x))
+        self.inner
+            .borrow_mut()
+            .get_mut(*y)
+            .and_then(|v| v.borrow_mut().get_mut(*x))
     }
 }
 
@@ -63,12 +74,18 @@ where
     }
 }
 
-impl<T> IterSpace<T, usize, 2> for Board2d<T> {
+impl<T, Vy: BorrowMut<[Vx]>, Vx: BorrowMut<[T]>> IterSpace<T, usize, 2> for Board2d<T, Vy, Vx> {
     fn iter(&self) -> impl Iterator<Item = ([usize; 2], &T)> {
         self.inner
+            .borrow()
             .iter()
             .enumerate()
-            .flat_map(move |(y, v)| v.iter().enumerate().map(move |(x, val)| ([x, y], val)))
+            .flat_map(move |(y, v)| {
+                v.borrow()
+                    .iter()
+                    .enumerate()
+                    .map(move |(x, val)| ([x, y], val))
+            })
     }
 }
 
@@ -84,12 +101,18 @@ where
     }
 }
 
-impl<T> IterMutSpace<T, usize, 2> for Board2d<T> {
+impl<T, Vy: BorrowMut<[Vx]>, Vx: BorrowMut<[T]>> IterMutSpace<T, usize, 2> for Board2d<T, Vy, Vx> {
     fn iter_mut(&mut self) -> impl Iterator<Item = ([usize; 2], &mut T)> {
         self.inner
+            .borrow_mut()
             .iter_mut()
             .enumerate()
-            .flat_map(move |(y, v)| v.iter_mut().enumerate().map(move |(x, val)| ([x, y], val)))
+            .flat_map(move |(y, v)| {
+                v.borrow_mut()
+                    .iter_mut()
+                    .enumerate()
+                    .map(move |(x, val)| ([x, y], val))
+            })
     }
 }
 
@@ -107,9 +130,13 @@ where
     }
 }
 
-impl<T> From<Vec<Vec<T>>> for Board2d<T> {
-    fn from(value: Vec<Vec<T>>) -> Self {
-        Board2d { inner: value }
+impl<T, Vy: BorrowMut<[Vx]>, Vx: BorrowMut<[T]>> From<Vy> for Board2d<T, Vy, Vx> {
+    fn from(value: Vy) -> Self {
+        Board2d {
+            inner: value,
+            phantom_data_t: PhantomData,
+            phantom_data_vx: PhantomData,
+        }
     }
 }
 
