@@ -97,7 +97,7 @@ fn calculate_cost(old_direction: Direction, new_direction: Direction) -> ures {
 }
 
 pub fn part1(input: &str) -> Result<ures, Error> {
-    let (board, start, end) = parse_board_1.final_parse(input)?;
+    let (board, start, end) = parse_input.final_parse(input)?;
 
     let mut dijkstra = Dijkstra {
         queue: BinaryHeap::new(),
@@ -126,7 +126,7 @@ pub fn part1(input: &str) -> Result<ures, Error> {
 }
 
 pub fn part2(input: &str) -> Result<ures, Error> {
-    let (board, start, end) = parse_board_1.final_parse(input)?;
+    let (board, start, end) = parse_input.final_parse(input)?;
 
     let mut dijkstra = Dijkstra {
         queue: BinaryHeap::new(),
@@ -325,7 +325,7 @@ where
     .context("parse full board")
 }
 
-fn parse_board_1(input: &str) -> IResult<&str, BoardAndStartPosAndEndPos, NomError> {
+fn parse_input(input: &str) -> IResult<&str, BoardAndStartPosAndEndPos, NomError> {
     parse_board(parse_board_line).parse(input)
 }
 

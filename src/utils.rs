@@ -34,6 +34,11 @@ pub type ures = usize;
 #[allow(non_camel_case_types)]
 pub type ires = isize;
 
+#[allow(non_camel_case_types, dead_code)]
+pub type musize = usize;
+#[allow(non_camel_case_types, dead_code)]
+pub type misize = isize;
+
 #[macro_export]
 macro_rules! part_solver {
     () => {

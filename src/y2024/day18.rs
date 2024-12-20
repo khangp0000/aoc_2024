@@ -6,7 +6,7 @@ use crate::part_solver;
 use crate::set::{BoolSpace, Set};
 use crate::space::space2d::{Board2d, Direction};
 use crate::space::{Pos, Space};
-use crate::utils::{cardinal, ures};
+use crate::utils::{cardinal, musize, ures};
 use derive_more::{Deref, DerefMut, From};
 use nom::character::complete::char;
 use nom::multi::{many1, many_m_n};
@@ -166,9 +166,13 @@ pub fn part2(input: &str) -> Result<String, Error> {
 }
 
 fn parse_coord_line(input: &str) -> IResult<&str, (usize, usize), NomError<'_>> {
-    separated_pair(ures.map(|v| v), char(','), ures.map(|v| v))
-        .context("parsing ures pair")
-        .parse(input)
+    separated_pair(
+        ures.map(|v| v as musize),
+        char(','),
+        ures.map(|v| v as musize),
+    )
+    .context("parsing ures pair")
+    .parse(input)
 }
 
 fn parse_coords_part_1(input: &str) -> IResult<&str, Vec<(usize, usize)>, NomError<'_>> {

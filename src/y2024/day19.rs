@@ -16,11 +16,21 @@ part_solver!();
 
 pub fn part1(input: &str) -> Result<ures, Error> {
     let (towels, designs) = input_parser.final_parse(input)?;
-
+    let mut cache = Vec::new();
     designs
         .into_iter()
         .map(|design| design.collect::<Vec<_>>())
-        .map(|d| can_match(d.iter().peekable(), &towels, &towels))
+        .map(|d| {
+            cache.clear();
+            can_match(
+                d.iter().peekable(),
+                0,
+                &towels,
+                &towels,
+                &mut cache,
+                true,
+            )
+        })
         .try_fold(0, |mut count, res| {
             if res? {
                 count += 1;
@@ -31,15 +41,17 @@ pub fn part1(input: &str) -> Result<ures, Error> {
 
 pub fn part2(input: &str) -> Result<ures, Error> {
     let (towels, designs) = input_parser.final_parse(input)?;
+    let mut cache = Vec::new();
     designs
         .into_iter()
         .map(|design| {
+            cache.clear();
             match_count(
                 design.peekable(),
                 0,
                 &towels,
                 &towels,
-                &mut Vec::new(),
+                &mut cache,
                 true,
             )
         })
@@ -103,21 +115,39 @@ fn input_parser(
     )
     .parse(input)
 }
-fn can_match<T, R: Borrow<T> + Clone, I: Iterator<Item = R> + Clone, Trie: TrieNode<T>>(
+fn can_match<T, R: Borrow<T> + Clone, I: ExactSizeIterator<Item = R> + Clone, Trie: TrieNode<T>>(
     mut iter: Peekable<I>,
+    pos: usize,
     trie: &Trie,
     root: &Trie,
+    cache: &mut Vec<Option<bool>>,
+    first: bool,
 ) -> Result<bool, Error> {
+    if first {
+        if let Some(Some(v)) = cache.get(pos) {
+            return Ok(*v);
+        }
+    }
     match trie.find_prefix(&mut iter)? {
         None => Ok(false),
         Some(node) => {
             if iter.peek().is_none() {
-                Ok(true)
-            } else {
-                Ok(can_match(iter.clone(), root, root)? || can_match(iter.clone(), node, root)?)
+                return Ok(true);
             }
+            let n_pos = pos + node.depth();
+            let matched = can_match(iter.clone(), n_pos, root, root, cache, true)?
+                || can_match(iter, pos, node, root, cache, false)?;
+            Ok(matched)
         }
     }
+    .inspect(|matched| {
+        if first {
+            if pos >= cache.len() {
+                cache.resize(pos + 1, None);
+            }
+            cache[pos].replace(*matched);
+        }
+    })
 }
 
 fn match_count<T, R: Borrow<T> + Clone, I: Iterator<Item = R> + Clone, Trie: TrieNode<T>>(
@@ -125,7 +155,7 @@ fn match_count<T, R: Borrow<T> + Clone, I: Iterator<Item = R> + Clone, Trie: Tri
     pos: usize,
     trie: &Trie,
     root: &Trie,
-    cache: &mut Vec<Option<usize>>,
+    cache: &mut Vec<Option<ures>>,
     first: bool,
 ) -> Result<ures, Error> {
     if first {
@@ -136,21 +166,23 @@ fn match_count<T, R: Borrow<T> + Clone, I: Iterator<Item = R> + Clone, Trie: Tri
     match trie.find_prefix(&mut iter)? {
         None => Ok(0),
         Some(node) => {
-            let n_pos = pos + node.depth();
             if iter.peek().is_none() {
                 return Ok(1);
             }
+            let n_pos = pos + node.depth();
             let count = match_count(iter.clone(), n_pos, root, root, cache, true)?
-                + match_count(iter.clone(), pos, node, root, cache, false)?;
-            if first {
-                if pos >= cache.len() {
-                    cache.resize(pos + 1, None);
-                }
-                cache[pos].replace(count);
-            }
+                + match_count(iter, pos, node, root, cache, false)?;
             Ok(count)
         }
     }
+    .inspect(|count| {
+        if first {
+            if pos >= cache.len() {
+                cache.resize(pos + 1, None);
+            }
+            cache[pos].replace(*count);
+        }
+    })
 }
 
 #[cfg(test)]
