@@ -15,6 +15,7 @@ use nom::{IResult, Parser, Slice};
 use nom_supreme::ParserExt;
 use std::borrow::Cow;
 use std::collections::VecDeque;
+use std::convert::identity;
 use std::ops::ControlFlow::{Break, Continue};
 
 part_solver!();
@@ -255,16 +256,15 @@ fn count_cheat<Predicate: Fn(usize) -> bool>(
                 let y = y.checked_add(y_diff);
                 if let Some(y) = y {
                     for x_diff in 2usize.saturating_sub(y_diff)..=(max_cheat_sec - y_diff) {
-
                         if x_diff == 0 {
-                            if let Some(distance_2) = board.get(&[x, y]).cloned().flatten() {
+                            if let Some(&Some(distance_2)) = board.get(&[x, y]) {
                                 if save_count_filter(distance_2.abs_diff(distance) - (x_diff + y_diff))
                                 {
                                     count += 1;
                                 }
                             }
                         } else if y_diff == 0 {
-                            if let Some(distance_2) = x.checked_add(x_diff).and_then(|x| board.get(&[x, y])).cloned().flatten() {
+                            if let Some(&Some(distance_2)) = x.checked_add(x_diff).and_then(|x| board.get(&[x, y])) {
                                 if save_count_filter(distance_2.abs_diff(distance) - (x_diff + y_diff))
                                 {
                                     count += 1;
@@ -273,8 +273,10 @@ fn count_cheat<Predicate: Fn(usize) -> bool>(
                         } else {
                             let add_count = [x.checked_sub(x_diff), x.checked_add(x_diff)]
                                 .into_iter()
-                                .filter_map(|x| x.and_then(|x| board.get(&[x, y])).cloned().flatten())
-                                .filter(|&distance_2| save_count_filter(distance_2.abs_diff(distance) - (x_diff + y_diff)))
+                                .filter_map(identity)
+                                .filter_map(|x| board.get(&[x, y]))
+                                .filter_map(|x| x.as_ref())
+                                .filter(|&&distance_2| save_count_filter(distance_2.abs_diff(distance) - (x_diff + y_diff)))
                                 .count();
                             count += add_count as ures;
                         };
