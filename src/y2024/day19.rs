@@ -22,14 +22,7 @@ pub fn part1(input: &str) -> Result<ures, Error> {
         .map(|design| design.collect::<Vec<_>>())
         .map(|d| {
             cache.clear();
-            can_match(
-                d.iter().peekable(),
-                0,
-                &towels,
-                &towels,
-                &mut cache,
-                true,
-            )
+            can_match(d.iter().peekable(), 0, &towels, &towels, &mut cache, true)
         })
         .try_fold(0, |mut count, res| {
             if res? {
@@ -46,14 +39,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
         .into_iter()
         .map(|design| {
             cache.clear();
-            match_count(
-                design.peekable(),
-                0,
-                &towels,
-                &towels,
-                &mut cache,
-                true,
-            )
+            match_count(design.peekable(), 0, &towels, &towels, &mut cache, true)
         })
         .try_fold(0, |sum, res| res.map(|v| sum + v))
 }
