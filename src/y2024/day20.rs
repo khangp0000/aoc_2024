@@ -252,29 +252,32 @@ fn count_cheat<Predicate: Fn(usize) -> bool>(
         if let &Some(distance) = distance {
             let [x, y] = pos;
             for y_diff in 0..=max_cheat_sec {
-                let arr = if y_diff == 0 {
-                    [Some(y), None]
-                } else {
-                    [y.checked_sub(y_diff), y.checked_add(y_diff)]
-                };
-                for y in arr.into_iter().flatten().filter(|y| *y < board.height()) {
+                let y = y.checked_add(y_diff);
+                if let Some(y) = y {
                     for x_diff in 2usize.saturating_sub(y_diff)..=(max_cheat_sec - y_diff) {
-                        let arr = if x_diff == 0 {
-                            [Some(x), None]
-                        } else {
-                            [x.checked_sub(x_diff), x.checked_add(x_diff)]
-                        };
-                        for distance_2 in arr
-                            .into_iter()
-                            .flatten()
-                            .filter_map(|x| board.get(&[x, y]).cloned().flatten())
-                        {
-                            if distance_2 > distance
-                                && save_count_filter(distance_2 - distance - (x_diff + y_diff))
-                            {
-                                count += 1;
+
+                        if x_diff == 0 {
+                            if let Some(distance_2) = board.get(&[x, y]).cloned().flatten() {
+                                if save_count_filter(distance_2.abs_diff(distance) - (x_diff + y_diff))
+                                {
+                                    count += 1;
+                                }
                             }
-                        }
+                        } else if y_diff == 0 {
+                            if let Some(distance_2) = x.checked_add(x_diff).and_then(|x| board.get(&[x, y])).cloned().flatten() {
+                                if save_count_filter(distance_2.abs_diff(distance) - (x_diff + y_diff))
+                                {
+                                    count += 1;
+                                }
+                            }
+                        } else {
+                            let add_count = [x.checked_sub(x_diff), x.checked_add(x_diff)]
+                                .into_iter()
+                                .filter_map(|x| x.and_then(|x| board.get(&[x, y])).cloned().flatten())
+                                .filter(|&distance_2| save_count_filter(distance_2.abs_diff(distance) - (x_diff + y_diff)))
+                                .count();
+                            count += add_count as ures;
+                        };
                     }
                 }
             }
