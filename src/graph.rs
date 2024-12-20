@@ -123,7 +123,7 @@ where
 }
 
 impl<State, Metadata, VisitedStateSet, NeighborFnObj> Iterator
-for Dfs<State, Metadata, VisitedStateSet, NeighborFnObj>
+    for Dfs<State, Metadata, VisitedStateSet, NeighborFnObj>
 where
     State: Clone,
     VisitedStateSet: Set<State>,

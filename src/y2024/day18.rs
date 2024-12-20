@@ -166,13 +166,9 @@ pub fn part2(input: &str) -> Result<String, Error> {
 }
 
 fn parse_coord_line(input: &str) -> IResult<&str, (usize, usize), NomError<'_>> {
-    separated_pair(
-        ures.map(|v| v),
-        char(','),
-        ures.map(|v| v),
-    )
-    .context("parsing ures pair")
-    .parse(input)
+    separated_pair(ures.map(|v| v), char(','), ures.map(|v| v))
+        .context("parsing ures pair")
+        .parse(input)
 }
 
 fn parse_coords_part_1(input: &str) -> IResult<&str, Vec<(usize, usize)>, NomError<'_>> {

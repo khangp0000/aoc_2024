@@ -85,9 +85,10 @@ fn forward_antinode(node1: [usize; 2], node2: [usize; 2]) -> Option<[usize; 2]> 
     let y1 = y1 as ires;
     let y2 = y2 as ires;
 
-    usize::try_from(x2 * 2 - x1)
-        .and_then(|x| usize::try_from(y2 * 2 - y1).map(|y| [x, y]))
-        .ok()
+    Some([
+        x2.checked_mul(2)?.checked_sub(x1)? as usize,
+        y2.checked_mul(2)?.checked_sub(y1)? as usize,
+    ])
 }
 
 #[inline]

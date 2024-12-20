@@ -11,6 +11,7 @@ mod graph;
 mod nom;
 mod set;
 mod space;
+mod trie;
 mod utils;
 mod y2024;
 

@@ -8,8 +8,10 @@ use nom::{AsChar, Compare, IResult, InputIter, InputLength, InputTake, Parser, S
 use nom_supreme::final_parser::{final_parser, ExtractContext, Location};
 use nom_supreme::ParserExt;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::num::NonZero;
-use std::ops::RangeFrom;
+use std::ops::ControlFlow::{Break, Continue};
+use std::ops::{ControlFlow, RangeFrom};
 
 /// A combinator that takes a parser `inner` and produces a parser that also consumes the following
 /// line ending or eof, returning the output of `inner`.
@@ -61,6 +63,52 @@ pub fn non_zero_ures(input: &str) -> IResult<&str, NonZero<crate::utils::ures>, 
         .parse(input)
 }
 
+struct InfiniteLoopCheck<I: InputLength, O, E: ParseError<I>, P: Parser<I, O, E>> {
+    parser: P,
+    phantom_data: PhantomData<(I, O, E)>,
+}
+
+impl<I: InputLength, O, E: ParseError<I>, P: Parser<I, O, E>> Parser<I, O, E>
+    for InfiniteLoopCheck<I, O, E, P>
+{
+    fn parse(&mut self, input: I) -> IResult<I, O, E> {
+        let len = input.input_len();
+        self.parser
+            .parse(input)
+            .and_then(|r| infinite_loop_check(r, len))
+    }
+}
+
+impl<I: InputLength, O, E: ParseError<I>, P: Parser<I, O, E>> InfiniteLoopCheckTrait<I, O, E, P>
+    for P
+{
+    fn infinite_loop_check(self) -> InfiniteLoopCheck<I, O, E, P> {
+        InfiniteLoopCheck {
+            parser: self,
+            phantom_data: PhantomData,
+        }
+    }
+}
+
+trait InfiniteLoopCheckTrait<I: InputLength, O, E: ParseError<I>, P: Parser<I, O, E>> {
+    fn infinite_loop_check(self) -> InfiniteLoopCheck<I, O, E, P>;
+}
+
+fn infinite_loop_check<I: InputLength, O, E: ParseError<I>>(
+    res: (I, O),
+    old_len: usize,
+) -> IResult<I, O, E> {
+    let (i, o) = res;
+    if i.input_len() == old_len {
+        Err(nom::Err::Error(E::from_error_kind(
+            i,
+            nom::error::ErrorKind::Many0,
+        )))
+    } else {
+        Ok((i, o))
+    }
+}
+
 pub trait FinalParse<I, O, E> {
     fn final_parse(self, input: I) -> Result<O, E>;
     fn partial_parse(self, input: I) -> Result<O, E>;
@@ -86,6 +134,7 @@ impl<'a, O, P: Parser<&'a str, O, NomError<'a, &'a str>>>
     }
 }
 
+#[allow(dead_code)]
 pub fn fold_separated_many0<I, O, O2, E, F, G, H, R, S>(
     mut sep: S,
     mut f: F,
@@ -111,32 +160,50 @@ where
                 i = i1;
             }
         }
-
+        let mut combined_parser = sep.by_ref().precedes(f.by_ref()).infinite_loop_check();
         loop {
-            let len = i.input_len();
-            match sep.parse(i.clone()) {
+            match combined_parser.parse(i.clone()) {
                 Err(nom::Err::Error(_)) => return Ok((i, res)),
                 Err(e) => return Err(e),
-                Ok((i1, _)) => {
-                    // infinite loop check: the parser must always consume
-                    if i1.input_len() == len {
-                        return Err(nom::Err::Error(E::from_error_kind(
-                            i1,
-                            nom::error::ErrorKind::Many0,
-                        )));
-                    }
-
-                    match f.parse(i1.clone()) {
-                        Err(nom::Err::Error(_)) => return Ok((i, res)),
-                        Err(e) => return Err(e),
-                        Ok((i2, o)) => {
-                            res = g(res, o);
-                            i = i2;
-                        }
-                    }
+                Ok((i2, o)) => {
+                    res = g(res, o);
+                    i = i2;
                 }
             }
         }
+    }
+}
+
+#[allow(dead_code)]
+pub fn fold_res_many0<I, O, E, E2, F, G, H, R>(
+    mut f: F,
+    mut init: H,
+    mut g: G,
+) -> impl FnMut(I) -> IResult<I, R, E>
+where
+    I: Clone + InputLength + Debug,
+    F: Parser<I, O, E>,
+    G: FnMut(R, O) -> Result<R, (R, Option<I>, nom::Err<E2>)>,
+    H: FnMut() -> R,
+    E: ParseError<I> + FromExternalError<I, E2>,
+{
+    move |mut input: I| {
+        let mut acc = init();
+        let mut f_infinite_loop_check = f.by_ref().infinite_loop_check();
+        loop {
+            match exec_once_res(&mut f_infinite_loop_check, &mut g, input.clone(), acc) {
+                Continue((n_acc, i1)) => {
+                    input = i1;
+                    acc = n_acc;
+                }
+                Break(r) => {
+                    acc = r?;
+                    break;
+                }
+            }
+        }
+
+        Ok((input, acc))
     }
 }
 
@@ -152,73 +219,164 @@ where
     H: FnMut() -> R,
     E: ParseError<I> + FromExternalError<I, E2>,
 {
-    move |i: I| {
-        let _i = i.clone();
-        let init = init();
+    move |mut input: I| {
+        let mut acc = init();
+        let mut f_infinite_loop_check = f.by_ref().infinite_loop_check();
+        match exec_once_res(&mut f_infinite_loop_check, &mut g, input.clone(), acc) {
+            Continue((n_acc, i1)) => {
+                input = i1;
+                acc = n_acc;
+            }
+            Break(r) => {
+                r?;
+                return Err(nom::Err::Error(E::from_error_kind(
+                    input,
+                    nom::error::ErrorKind::Many1,
+                )));
+            }
+        }
 
-        match f.parse(_i) {
-            Err(nom::Err::Error(_)) => Err(nom::Err::Error(E::from_error_kind(
-                i,
-                nom::error::ErrorKind::Many1,
-            ))),
-            Err(e) => Err(e),
-            Ok((i1, o)) => {
-                match g(init, o) {
-                    Ok(mut acc) => {
-                        let mut input = i1;
-                        loop {
-                            let _input = input.clone();
-                            let len = input.input_len();
-
-                            match f.parse(_input) {
-                                Err(nom::Err::Error(_)) => {
-                                    break;
-                                }
-                                Err(e) => return Err(e),
-                                Ok((i, o)) => {
-                                    // infinite loop check: the parser must always consume
-                                    if i.input_len() == len {
-                                        return Err(nom::Err::Failure(E::from_error_kind(
-                                            i,
-                                            nom::error::ErrorKind::Many1,
-                                        )));
-                                    }
-
-                                    match g(acc, o) {
-                                        Ok(n_acc) => {
-                                            acc = n_acc;
-                                            input = i;
-                                        }
-                                        Err((n_acc, error_loc, e)) => match e {
-                                            nom::Err::Error(_) => {
-                                                acc = n_acc;
-                                                break;
-                                            }
-                                            e => {
-                                                return Err(e.map(|ee| {
-                                                    E::from_external_error(
-                                                        error_loc.unwrap_or(input),
-                                                        nom::error::ErrorKind::Many1,
-                                                        ee,
-                                                    )
-                                                }))
-                                            }
-                                        },
-                                    };
-                                }
-                            }
-                        }
-                        Ok((input, acc))
-                    }
-                    Err((_, error_loc, e)) => Err(e.map(|ee| {
-                        E::from_external_error(
-                            error_loc.unwrap_or(i1),
-                            nom::error::ErrorKind::Many1,
-                            ee,
-                        )
-                    })),
+        loop {
+            match exec_once_res(&mut f_infinite_loop_check, &mut g, input.clone(), acc) {
+                Continue((n_acc, i1)) => {
+                    input = i1;
+                    acc = n_acc;
+                }
+                Break(r) => {
+                    acc = r?;
+                    break;
                 }
             }
         }
+
+        Ok((input, acc))
+    }
+}
+
+#[allow(dead_code)]
+pub fn fold_separated_res_many0<I, O, O2, E, E2, F, F2, G, H, R>(
+    mut sep: F2,
+    mut f: F,
+    mut init: H,
+    mut g: G,
+) -> impl FnMut(I) -> IResult<I, R, E>
+where
+    I: Clone + InputLength + Debug,
+    F2: Parser<I, O2, E>,
+    F: Parser<I, O, E>,
+    G: FnMut(R, O) -> Result<R, (R, Option<I>, nom::Err<E2>)>,
+    H: FnMut() -> R,
+    E: ParseError<I> + FromExternalError<I, E2>,
+{
+    move |mut input: I| {
+        let mut acc = init();
+        let mut f_infinite_loop_check = f.by_ref().infinite_loop_check();
+        match exec_once_res(&mut f_infinite_loop_check, &mut g, input.clone(), acc) {
+            Continue((n_acc, i1)) => {
+                input = i1;
+                acc = n_acc;
+            }
+            Break(r) => return Ok((input, r?)),
+        }
+
+        let mut sep_f_infinite_loop_check = sep.by_ref().precedes(f.by_ref()).infinite_loop_check();
+
+        loop {
+            match exec_once_res(&mut sep_f_infinite_loop_check, &mut g, input.clone(), acc) {
+                Continue((n_acc, i1)) => {
+                    input = i1;
+                    acc = n_acc;
+                }
+                Break(r) => {
+                    acc = r?;
+                    break;
+                }
+            }
+        }
+
+        Ok((input, acc))
+    }
+}
+
+pub fn fold_separated_res_many1<I, O, O2, E, E2, F, F2, G, H, R>(
+    mut sep: F2,
+    mut f: F,
+    mut init: H,
+    mut g: G,
+) -> impl FnMut(I) -> IResult<I, R, E>
+where
+    I: Clone + InputLength + Debug,
+    F2: Parser<I, O2, E>,
+    F: Parser<I, O, E>,
+    G: FnMut(R, O) -> Result<R, (R, Option<I>, nom::Err<E2>)>,
+    H: FnMut() -> R,
+    E: ParseError<I> + FromExternalError<I, E2>,
+{
+    move |mut input: I| {
+        let mut acc = init();
+        let mut f_infinite_loop_check = f.by_ref().infinite_loop_check();
+        match exec_once_res(&mut f_infinite_loop_check, &mut g, input.clone(), acc) {
+            Continue((n_acc, i1)) => {
+                input = i1;
+                acc = n_acc;
+            }
+            Break(r) => {
+                r?;
+                return Err(nom::Err::Error(E::from_error_kind(
+                    input,
+                    nom::error::ErrorKind::Many1,
+                )));
+            }
+        }
+
+        let mut sep_f_infinite_loop_check = sep.by_ref().precedes(f.by_ref()).infinite_loop_check();
+
+        loop {
+            match exec_once_res(&mut sep_f_infinite_loop_check, &mut g, input.clone(), acc) {
+                Continue((n_acc, i1)) => {
+                    input = i1;
+                    acc = n_acc;
+                }
+                Break(r) => {
+                    acc = r?;
+                    break;
+                }
+            }
+        }
+
+        Ok((input, acc))
+    }
+}
+
+pub fn exec_once_res<I, O, E, E2, F, G, R>(
+    f: &mut F,
+    g: &mut G,
+    input: I,
+    acc: R,
+) -> ControlFlow<Result<R, nom::Err<E>>, (R, I)>
+where
+    I: Clone + InputLength + Debug,
+    F: Parser<I, O, E>,
+    G: FnMut(R, O) -> Result<R, (R, Option<I>, nom::Err<E2>)>,
+    E: ParseError<I> + FromExternalError<I, E2>,
+{
+    match f.parse(input.clone()) {
+        Err(e) => Break(match e {
+            nom::Err::Error(_) => Ok(acc),
+            e => Err(e),
+        }),
+        Ok((i1, o)) => match g(acc, o) {
+            Ok(n_acc) => Continue((n_acc, i1)),
+            Err((n_acc, error_loc, e)) => match e {
+                nom::Err::Error(_) => Break(Ok(n_acc)),
+                e => Break(Err(e.map(|ee| {
+                    E::from_external_error(
+                        error_loc.unwrap_or(input.clone()),
+                        nom::error::ErrorKind::Many1,
+                        ee,
+                    )
+                }))),
+            },
+        },
     }
 }
