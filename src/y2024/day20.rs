@@ -125,7 +125,7 @@ fn inner_solver<const N: usize>(input: &str) -> Result<ures, Error> {
     let mut distance = 0;
     loop {
         match bfs.next() {
-            None => break,
+            None => return Err(Error::Unsolvable("cannot find path to end".into())),
             Some(Err(e)) => return Err(e),
             Some(Ok(Processed((pos, _)))) => {
                 if let Some(error) = bfs.neighbor_fn.error.take() {
@@ -133,6 +133,9 @@ fn inner_solver<const N: usize>(input: &str) -> Result<ures, Error> {
                 }
                 bfs.visited.set(&pos, Some(distance));
                 distance += 1;
+                if pos == end {
+                    break
+                }
             }
             _ => continue,
         }
