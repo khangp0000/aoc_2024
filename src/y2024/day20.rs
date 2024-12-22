@@ -15,7 +15,6 @@ use nom::{IResult, Parser, Slice};
 use nom_supreme::ParserExt;
 use std::borrow::Cow;
 use std::collections::VecDeque;
-use std::convert::identity;
 use std::ops::ControlFlow::{Break, Continue};
 
 part_solver!();
@@ -134,7 +133,7 @@ fn inner_solver<const N: usize>(input: &str) -> Result<ures, Error> {
                 bfs.visited.set(&pos, Some(distance));
                 distance += 1;
                 if pos == end {
-                    break
+                    break;
                 }
             }
             _ => continue,
@@ -261,15 +260,15 @@ fn count_cheat<Predicate: Fn(usize) -> bool>(
                     for x_diff in 2usize.saturating_sub(y_diff)..=(max_cheat_sec - y_diff) {
                         if x_diff == 0 {
                             if let Some(&Some(distance_2)) = board.get(&[x, y]) {
-                                if save_count_filter(distance_2.abs_diff(distance) - y_diff)
-                                {
+                                if save_count_filter(distance_2.abs_diff(distance) - y_diff) {
                                     count += 1;
                                 }
                             }
                         } else if y_diff == 0 {
-                            if let Some(&Some(distance_2)) = x.checked_add(x_diff).and_then(|x| board.get(&[x, y])) {
-                                if save_count_filter(distance_2.abs_diff(distance) - x_diff)
-                                {
+                            if let Some(&Some(distance_2)) =
+                                x.checked_add(x_diff).and_then(|x| board.get(&[x, y]))
+                            {
+                                if save_count_filter(distance_2.abs_diff(distance) - x_diff) {
                                     count += 1;
                                 }
                             }
@@ -277,10 +276,14 @@ fn count_cheat<Predicate: Fn(usize) -> bool>(
                             let euclid_distance = x_diff + y_diff;
                             let add_count = [x.checked_sub(x_diff), x.checked_add(x_diff)]
                                 .into_iter()
-                                .filter_map(identity)
+                                .flatten()
                                 .filter_map(|x| board.get(&[x, y]))
                                 .filter_map(|x| x.as_ref())
-                                .filter(|&&distance_2| save_count_filter(distance_2.abs_diff(distance) - euclid_distance))
+                                .filter(|&&distance_2| {
+                                    save_count_filter(
+                                        distance_2.abs_diff(distance) - euclid_distance,
+                                    )
+                                })
                                 .count();
                             count += add_count as ures;
                         };

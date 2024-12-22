@@ -75,6 +75,18 @@ where
     }
 }
 
+impl<State, Weight, Metadata, VisitedStateSet, NeighborFnObj>
+    Dijkstra<State, Weight, Metadata, VisitedStateSet, NeighborFnObj>
+where
+    Weight: Ord,
+    VisitedStateSet: Set<State>,
+{
+    pub fn push_queue(&mut self, swm: (State, Weight, Metadata)) {
+        self.queue
+            .push(Reverse(StateWithWeightAndMetadata::from(swm)))
+    }
+}
+
 pub struct Bfs<State, Metadata, VisitedStateSet, NeighborFnObj>
 where
     VisitedStateSet: Set<State>,
