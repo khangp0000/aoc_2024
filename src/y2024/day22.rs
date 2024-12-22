@@ -69,11 +69,7 @@ fn compute_banana(
         diff_index_3 = diff_index_4;
         secret = gen_next_secret(secret);
         let next_last_digit = (secret % 10) as musize;
-        diff_index_4 = if next_last_digit >= prev_last_digit {
-            next_last_digit - prev_last_digit
-        } else {
-            19 - prev_last_digit + next_last_digit
-        };
+        diff_index_4 = 9 + next_last_digit - prev_last_digit;
         prev_last_digit = next_last_digit;
         if i >= 3 && !visited[diff_index_1][diff_index_2][diff_index_3][diff_index_4] {
             visited[diff_index_1][diff_index_2][diff_index_3][diff_index_4] = true;
