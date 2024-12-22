@@ -1,7 +1,7 @@
 use crate::error::{Error, NomError};
 use crate::nom::{single_line, ures, FinalParse};
 use crate::part_solver;
-use crate::utils::ures;
+use crate::utils::{musize, ures};
 use nom::multi::many1;
 use nom::{IResult, Parser};
 
@@ -41,7 +41,7 @@ fn parse_input(input: &str) -> IResult<&str, Vec<ures>, NomError> {
 fn gen_next_secret(secret: ures) -> ures {
     let secret = ((secret << 6) ^ secret) & 16777215;
     let secret = ((secret >> 5) ^ secret) & 16777215;
-    
+
     ((secret << 11) ^ secret) & 16777215
 }
 
@@ -68,7 +68,7 @@ fn compute_banana(
         diff_index_2 = diff_index_3;
         diff_index_3 = diff_index_4;
         secret = gen_next_secret(secret);
-        let next_last_digit = secret % 10;
+        let next_last_digit = (secret % 10) as musize;
         diff_index_4 = if next_last_digit >= prev_last_digit {
             next_last_digit - prev_last_digit
         } else {
@@ -78,7 +78,7 @@ fn compute_banana(
         if i >= 3 && !visited[diff_index_1][diff_index_2][diff_index_3][diff_index_4] {
             visited[diff_index_1][diff_index_2][diff_index_3][diff_index_4] = true;
             four_diffs_to_banana[diff_index_1][diff_index_2][diff_index_3][diff_index_4] +=
-                next_last_digit;
+                next_last_digit as ures;
         }
     }
 }
