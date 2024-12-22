@@ -375,9 +375,9 @@ impl NeighborFn<(State, Weight, Metadata)> for TargetButtonNeighbor<'_> {
     ) -> impl IntoIterator<Item = (State, Weight, Metadata)> {
         let &((current_num, current_key), weight, _) = swm;
         let next_state_iter = if current_num == self.target {
-            current_num.press().into_iter()
+            current_num.press().iter()
         } else {
-            current_num.get_neighbor().into_iter()
+            current_num.get_neighbor().iter()
         };
         next_state_iter.map(move |next_state| {
             let (_, next_key) = next_state;
