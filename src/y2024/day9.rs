@@ -150,8 +150,8 @@ impl<'a> CompactDataIter<'a> {
         let current_idx = 0;
         let rev_idx = disk.len() & (usize::MAX - 1);
         let current_val = 0;
-        let current_val_count = disk.first().cloned().unwrap_or(0);
-        let rev_left_over_count = disk.get(rev_idx).cloned().unwrap_or(0);
+        let current_val_count = disk.first().copied().unwrap_or(0);
+        let rev_left_over_count = disk.get(rev_idx).copied().unwrap_or(0);
         CompactDataIter {
             disk,
             current_idx,

@@ -44,7 +44,7 @@ impl<I, B: Space<bool, I, N>, const N: usize> Set<[I; N]> for BoolSpace<I, B, N>
     fn contains(&self, elem: &[I; N]) -> Result<bool, Error> {
         self.get(elem)
             .ok_or_else(|| Error::InvalidState("out of bound".into()))
-            .cloned()
+            .copied()
     }
     fn insert(&mut self, elem: [I; N]) -> Result<bool, Error> {
         let val = self

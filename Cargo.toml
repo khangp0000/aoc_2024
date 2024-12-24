@@ -23,6 +23,8 @@ gcd = "2.3.0"
 nom-supreme = "0.8.0"
 derive_more = { version = "1.0.0", features = ["full"] }
 indexmap = "2.7.0"
+array-init = "2.1.0"
+num-integer = "0.1.46"
 
 [profile.release-lto]
 inherits = "release"

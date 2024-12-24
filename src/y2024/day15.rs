@@ -410,7 +410,7 @@ fn check_board(board: &Board2d<u8>) -> bool {
             && pos
                 .shift_dimension(0, 1)
                 .and_then(|p| board.get(&p))
-                .cloned()
+                .copied()
                 != Some(b']')
     }) {
         println!("{:?}", bad_pos);

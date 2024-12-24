@@ -113,7 +113,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
 
     validate_part_2_solvable(&program)?;
 
-    let no_loop_program: Vec<u8> = program.iter().cloned().take(program.len() - 2).collect();
+    let no_loop_program: Vec<u8> = program.iter().copied().take(program.len() - 2).collect();
     find_a_val_match_program_to_output(0, program.iter().rev(), &no_loop_program)?
         .ok_or_else(|| Error::Unsolvable("cannot find valid a_val".into()))
 }

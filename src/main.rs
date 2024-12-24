@@ -8,6 +8,7 @@ use std::time::Duration;
 
 mod error;
 mod graph;
+mod math;
 mod nom;
 mod set;
 mod space;

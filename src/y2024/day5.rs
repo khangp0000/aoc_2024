@@ -25,7 +25,7 @@ pub fn part2(input: &str) -> Result<ures, Error> {
     let res = all_lists
         .iter()
         .filter(|list| !is_valid(list, &relationship))
-        .map(|list| (BitSet::<usize>::from_iter(list.iter().cloned()), list))
+        .map(|list| (BitSet::<usize>::from_iter(list.iter().copied()), list))
         .map(|(original_list_bit_set, list)| {
             let mut fixed: Vec<usize> = Vec::with_capacity(list.len());
             let mut visited = BitSet::<usize>::default();
