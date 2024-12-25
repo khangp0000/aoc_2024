@@ -93,7 +93,7 @@ pub fn part2(input: &str) -> Result<String, Error> {
     );
     let mut largest_clique = all_cliques
         .into_iter()
-        .max_by(|clique1, clique2| clique1.len().cmp(&clique2.len()))
+        .max_by_key(|clique| clique.len())
         .ok_or_else(|| Error::InvalidState("no clique found".into()))?
         .into_iter()
         .map(|index| {
