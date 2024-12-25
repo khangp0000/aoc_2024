@@ -1,15 +1,15 @@
-use derive_more::{Deref, DerefMut, From, Into};
-use nom::bytes::complete::take_while_m_n;
-use nom::{IResult, Parser};
-use nom::branch::alt;
-use nom::character::complete::space0;
-use nom::multi::{fold_many_m_n};
-use nom_supreme::ParserExt;
-use nom_supreme::tag::complete::tag;
 use crate::error::{Error, NomError};
 use crate::nom::{fold_separated_many0, single_line, single_line_not_eof, FinalParse};
 use crate::part_solver;
 use crate::utils::ures;
+use derive_more::{Deref, DerefMut, From, Into};
+use nom::branch::alt;
+use nom::bytes::complete::take_while_m_n;
+use nom::character::complete::space0;
+use nom::multi::fold_many_m_n;
+use nom::{IResult, Parser};
+use nom_supreme::tag::complete::tag;
+use nom_supreme::ParserExt;
 
 part_solver!();
 
@@ -32,8 +32,7 @@ pub fn part2(_input: &str) -> Result<ures, Error> {
 }
 
 fn parse_key_or_lock_line(input: &str) -> IResult<&str, &str, NomError> {
-    single_line_not_eof(take_while_m_n(5, 5, |c: char| c  == '.' || c == '#'))
-        .parse(input)
+    single_line_not_eof(take_while_m_n(5, 5, |c: char| c == '.' || c == '#')).parse(input)
 }
 
 #[derive(Copy, Clone, From, Into, Hash, Eq, PartialEq, Deref, DerefMut)]
@@ -60,51 +59,47 @@ impl Key {
     }
 }
 
-fn parse_lock(
-    input: &str,
-) -> IResult<&str, LockOrKey, NomError> {
+fn parse_lock(input: &str) -> IResult<&str, LockOrKey, NomError> {
     single_line_not_eof(tag("#####"))
-        .precedes(
-            fold_many_m_n(
-                5,
-                5,
-                parse_key_or_lock_line,
-                || [0;5],
-                |mut res, s| {
-                    s.as_bytes().into_iter()
-                        .enumerate()
-                        .filter(|&(_, &v)| v == b'#')
-                        .for_each(|(i, _)| res[i] += 1);
+        .precedes(fold_many_m_n(
+            5,
+            5,
+            parse_key_or_lock_line,
+            || [0; 5],
+            |mut res, s| {
+                s.as_bytes()
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &v)| v == b'#')
+                    .for_each(|(i, _)| res[i] += 1);
 
-                    res
-                },
-            )
-        ).map(Lock::from)
+                res
+            },
+        ))
+        .map(Lock::from)
         .map(LockOrKey::from)
         .terminated(single_line(tag(".....")))
         .parse(input)
 }
 
-fn parse_key(
-    input: &str,
-) -> IResult<&str, LockOrKey, NomError> {
+fn parse_key(input: &str) -> IResult<&str, LockOrKey, NomError> {
     single_line_not_eof(tag("....."))
-        .precedes(
-            fold_many_m_n(
-                5,
-                5,
-                parse_key_or_lock_line,
-                || [0;5],
-                |mut res, s| {
-                    s.as_bytes().into_iter()
-                        .enumerate()
-                        .filter(|&(_, &v)| v == b'#')
-                        .for_each(|(i, _)| res[i] += 1);
+        .precedes(fold_many_m_n(
+            5,
+            5,
+            parse_key_or_lock_line,
+            || [0; 5],
+            |mut res, s| {
+                s.as_bytes()
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &v)| v == b'#')
+                    .for_each(|(i, _)| res[i] += 1);
 
-                    res
-                },
-            )
-        ).map(Key::from)
+                res
+            },
+        ))
+        .map(Key::from)
         .map(LockOrKey::from)
         .terminated(single_line(tag("#####")))
         .parse(input)
@@ -117,17 +112,14 @@ fn parse_input(input: &str) -> IResult<&str, (Vec<Lock>, Vec<Key>), NomError> {
         || (Vec::new(), Vec::new()),
         |(mut locks, mut keys), lock_or_key| {
             match lock_or_key {
-                LockOrKey::Lock(l) => {
-                    locks.push(l)
-                }
-                LockOrKey::Key(k) => {
-                    keys.push(k)
-                }
+                LockOrKey::Lock(l) => locks.push(l),
+                LockOrKey::Key(k) => keys.push(k),
             }
 
             (locks, keys)
-        }
-    ).parse(input)
+        },
+    )
+    .parse(input)
 }
 
 #[cfg(test)]
